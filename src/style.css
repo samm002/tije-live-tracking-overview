@@ -42,6 +42,7 @@ main { min-height:0;outline:none; }
 .svg-mono { font:18px monospace;fill:var(--muted); }
 .svg-code { font:20px monospace;fill:var(--ink); }
 .svg-big { font-size:48px;font-weight:550;letter-spacing:-1px;fill:var(--blue); }
+.svg-formula { font-size:42px;font-weight:550;fill:var(--blue); }
 .route-base { stroke:#e7edf6;stroke-width:19;fill:none;stroke-linejoin:round;stroke-linecap:round; }
 .route-line { stroke:var(--blue);stroke-width:3;fill:none;stroke-linejoin:round;stroke-linecap:round; }
 .map-road { stroke:#d4dfea;stroke-width:12;fill:none;stroke-linejoin:round; }
@@ -105,6 +106,10 @@ main { min-height:0;outline:none; }
 .bookend>p:not(.cover-meta) { margin:0;font-size:clamp(20px,2vw,30px);max-width:750px;line-height:1.4; }
 .cover-meta { margin:0;font:13px monospace;letter-spacing:1px;color:var(--muted); }
 .cover-route { color:var(--purple);font-size:30px;letter-spacing:2px;margin-top:20px; }
+.is-cover { position:relative;isolation:isolate;max-width:none;overflow:hidden; }
+.cover-background { position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.12;z-index:-1;pointer-events:none; }
+.cover-title-main,.cover-title-after { display:block; }
+.cover-title-after { color:var(--ink); }
 .is-qa h1 { font-size:clamp(80px,12vw,180px); }
 .is-bookend .topbar { border-color:transparent; }
 .controls { position:fixed;right:20px;bottom:13px;display:flex;gap:8px;z-index:5;transition:opacity .2s; }

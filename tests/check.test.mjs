@@ -29,7 +29,7 @@ test('18 slide, cover/Q&A satu langkah, dan konten layar terpisah dari bahan pem
 test('alur memuat proses pendukung dan batas protokol yang diminta',()=>{
   assert.deepEqual(plain(D.stages.map(s=>s.id)),['bus','broker','forwarder','rabbitmq','consumer','output-broker','dashboard']);
   assert.deepEqual(plain(D.stages.map(s=>s.label)),['Bus','Source broker','Forwarder','Queue','Consumer','Destination broker','Dashboard']);
-  assert.deepEqual(plain(D.pipeline),['Enrich + history','Stop position','Out-of-route','Snap','ETA','Stopping point','Position meter','Headway','Save history cache','Publish']);
+  assert.deepEqual(plain(D.pipeline),['Enrich + history','Stop position','Out-of-route','Snap','ETA','Stopping point','Position meter','Headway','Update History Cache','Publish']);
   const forwarder=D.scenes.find(s=>s.id==='forwarder');
   assert.match(forwarder.steps.join(' '),/AMQP/);assert.match(forwarder.steps.join(' '),/Consistent-hash/);
   assert.ok(D.scenes.find(s=>s.id==='enrichment').payload);
@@ -96,7 +96,7 @@ test('renderer dapat menampilkan seluruh langkah, termasuk field dan penutup',()
     env.location.hash='#'+scene.id;listeners.hashchange();
     for(let step=0;step<scene.steps.length;step++){
       const html=elements.get('#main').innerHTML;
-      assert.ok(html.includes((scene.visual==='cover'?D.title:scene.title).replace(/&/g,'&amp;')),scene.id);
+      assert.ok(html.replace(/<[^>]+>/g,'').includes((scene.visual==='cover'?D.title:scene.title).replace(/&/g,'&amp;')),scene.id);
       assert.ok(!html.includes('undefined'),scene.id);
       assert.ok(!html.includes('class="analogy"'),scene.id);
       if(scene.payload)assert.ok(html.includes('payload-panel'),scene.id);

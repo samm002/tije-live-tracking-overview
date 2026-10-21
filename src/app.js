@@ -36,7 +36,7 @@
     return D.pipeline.map((label,i)=>{
       const x=15+(i<5?i:9-i)*198,y=75+Math.floor(i/5)*190;
       return box(x,y,180,120,`${i+1}. ${label}`,'',i===9?'blue':'purple','svg-pipeline-title',15)+(i<4?arrow(x+180,y+60,x+195,y+60,'purple'):i>=5&&i<9?arrow(x,y+60,x-15,y+60,'purple'):'');
-    }).join('')+arrow(895,200,895,250,'purple')+text(500,32,'PROCESSING ONE GPS REPORT','svg-mono','middle');
+    }).join('')+arrow(895,200,895,250,'purple')+text(500,32,'1 GPS Point Journey','svg-mono','middle');
   }
   function visual(scene,step) {
     const on=n=>step>=n,compact=Boolean(scene.payload&&scene.payload!=='raw'),w=compact?700:1000;
@@ -69,7 +69,7 @@
         for(let i=0;i<4;i++)s+=box(740,20+i*102,220,88,'Worker '+(i+1),'',i===1?'purple':'gray');
         s+=group(on(1),arrow(645,205,730,165,'purple')+text(500,80,'TJ-123 → same worker','svg-node-title','middle'))+group(on(2),text(30,340,'Prefetch 4 · unacknowledged deliveries','svg-node-title')+text(30,378,'ACK confirms delivery handling.','svg-small'))+text(30,435,'Checkout config: 100 queue × 4 = 400 slot / instance.','svg-small');break;
       case 'enrichment':
-        s=box(15,165,210,130,'GPS report + state','TJ-123')+group(on(1),box(265,20,245,100,'Cron API','Reference by body number','purple')+arrow(385,125,385,160,'purple')+box(265,165,245,130,'Redis','Reference cache','purple')+arrow(230,230,260,230,'purple'))+group(on(2),arrow(515,230,555,230,'teal')+box(560,165,125,130,'Trip','A–B–C','teal'))+text(345,375,'Redis lookup by body number; fewer database reads.','svg-small','middle');break;
+        s=box(15,175,205,150,'Raw GPS message','TJ-123')+group(on(1),box(245,20,210,110,'Cron API','Provide Redis data','purple')+arrow(350,135,350,170,'purple')+box(245,175,210,150,'Redis','Reference cache','purple')+arrow(225,250,240,250,'purple'))+group(on(2),arrow(460,250,475,250,'teal')+box(480,175,205,150,'Enriched message','raw + enriched data','teal'))+text(350,390,'Redis lookup avoids database reads per GPS report.','svg-small','middle');break;
       case 'position':
         s=route(true)+bus(470,190,'orange','raw · 10:00:00')+group(on(0),'<circle cx="470" cy="190" r="85" fill="#c4731510" stroke="#c47315" stroke-dasharray="7 5"/>')+group(on(1),arrow(370,125,430,155,'purple')+text(25,55,'Radius + sequence + bearing + history','svg-node-title'))+group(on(2),tag(15,360,'Prev B','purple')+tag(200,360,'Current —')+tag(440,360,'Next C','teal')+text(350,415,'09:59:50 arrival B → 10:00:00 departure B','svg-small','middle'))+group(on(3),text(350,95,'Out-of-route: raw distance to trip geometry','svg-small','middle'));break;
       case 'snap': {
@@ -79,7 +79,13 @@
         s+=text(350,55,fallback?'Fallback scenario':'Candidates → bearing → continuity','svg-node-title','middle')+group(on(2),text(350,365,fallback?'Fallback → raw GPS':'Snapped coordinates only when eligible.','svg-small','middle'))+group(on(3),text(350,410,'Stop status is computed from raw GPS before snap.','svg-small','middle'));break;
       }
       case 'eta':
-        s=text(350,80,'Remaining route distance → stop C','svg-node-title','middle')+text(350,155,'1.000 m','svg-big','middle')+group(on(1),text(350,225,'24 → minimum calculation speed 30 km/h','svg-node-title','middle')+text(350,300,'ETA ≈ 2 min','svg-big','middle'))+group(on(2),text(350,360,'Stopping point · position meter 1,240 m','svg-small','middle'))+group(on(3),text(350,408,'Headway · inter-bus context','svg-node-title','middle'));break;
+        s=text(500,80,'ETA = distance / speed','svg-formula','middle')+
+          text(500,125,'distance: remaining route distance · speed: calculation speed','svg-small','middle')+
+          group(on(1),text(500,195,'speed = max(device speed, 30 km/h)','svg-node-title','middle')+
+          text(500,235,'Example: 1,000 m · device speed 24 km/h → calculation speed 30 km/h','svg-small','middle'))+
+          group(on(2),text(500,305,'ETA (s) = (distance_m / 1,000) / speed_kmh × 3,600','svg-code','middle')+
+          text(500,350,'= (1,000 / 1,000) / 30 × 3,600','svg-node-title','middle'))+
+          group(on(3),text(500,425,'120 s = 2 min','svg-big','middle'));break;
       case 'publish':
         s=box(10,40,210,105,'Redis state','history:<bus>','purple')+
           group(on(1),arrow(225,90,240,90)+box(245,40,210,105,'Consumer','Publish via MQTT','purple')+
@@ -177,7 +183,10 @@
       `<div class="hook-photo${step<1?' is-pending':''}">${photoSlot('dashboardPhoto')}<figcaption>Live tracking dashboard</figcaption></div></figure>`;
   }
   function sceneHtml(scene,step) {
-    if(scene.visual==='cover')return `<section class="stage bookend"><h1>${esc(D.title)}</h1><div class="cover-route" aria-hidden="true">● ── ● ── ●</div></section>`;
+    if(scene.visual==='cover') {
+      const split=D.title.indexOf(':');
+      return `<section class="stage bookend is-cover"><img class="cover-background" src="${esc(D.assets.coverBackground.file)}" alt="" aria-hidden="true"><h1><span class="cover-title-main">${esc(D.title.slice(0,split+1))}</span> <span class="cover-title-after">${esc(D.title.slice(split+1).trim())}</span></h1><div class="cover-route" aria-hidden="true">● ── ● ── ●</div></section>`;
+    }
     if(scene.visual==='qa')return `<section class="stage bookend is-qa"><p class="cover-meta">TIJEMPOLAN</p><h1>${esc(scene.title)}</h1><p>${esc(scene.takeaway)}</p></section>`;
     let figure;
     if(scene.visual==='hook')figure=hookFigure(step);

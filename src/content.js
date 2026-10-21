@@ -64,6 +64,12 @@ window.TRACKING = {
       "alt": "Screenshot asli dashboard live tracking.",
       "required": false,
       "placeholder": true
+    },
+    "coverBackground": {
+      "file": "assets/dashboard-title-background.png",
+      "label": "Title background",
+      "alt": "Tampilan dashboard live tracking dengan peta tiga dimensi dan kendaraan.",
+      "required": true
     }
   },
   "demo": {
@@ -110,6 +116,7 @@ window.TRACKING = {
     "longitude": 106.8111,
     "speed": 24,
     "bearing": 135,
+    "ignition": 1,
     "source": "OBU",
     "deviceTimestamp": 1792551600000
   },
@@ -120,6 +127,7 @@ window.TRACKING = {
       "longitude": 106.8111,
       "speed": 24,
       "bearing": 135,
+      "ignition": 1,
       "source": "OBU",
       "deviceTimestamp": 1792551600000
     },
@@ -129,6 +137,7 @@ window.TRACKING = {
       "longitude": 106.8111,
       "speed": 24,
       "bearing": 135,
+      "ignition": 1,
       "source": "OBU",
       "deviceTimestamp": 1792551600000
     },
@@ -138,6 +147,7 @@ window.TRACKING = {
       "longitude": 106.8111,
       "speed": 24,
       "bearing": 135,
+      "ignition": 1,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
       "route_code": "10",
@@ -152,6 +162,7 @@ window.TRACKING = {
       "longitude": 106.8111,
       "speed": 24,
       "bearing": 135,
+      "ignition": 1,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
       "route_code": "10",
@@ -171,6 +182,7 @@ window.TRACKING = {
       "longitude": 106.8111,
       "speed": 24,
       "bearing": 135,
+      "ignition": 1,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
       "route_code": "10",
@@ -193,6 +205,7 @@ window.TRACKING = {
       "longitude": 106.8111,
       "speed": 24,
       "bearing": 135,
+      "ignition": 1,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
       "route_code": "10",
@@ -219,6 +232,7 @@ window.TRACKING = {
       "longitude": 106.8111,
       "speed": 24,
       "bearing": 135,
+      "ignition": 1,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
       "route_code": "10",
@@ -276,7 +290,7 @@ window.TRACKING = {
     "Stopping point",
     "Position meter",
     "Headway",
-    "Save history cache",
+    "Update History Cache",
     "Publish"
   ],
   "scenes": [
@@ -501,15 +515,15 @@ window.TRACKING = {
     {
       "id": "enrichment",
       "title": "Enrichment: melengkapi context",
-      "takeaway": "Body number menghubungkan GPS report dengan reference data kendaraan dan trip.",
+      "takeaway": "Consumer melengkapi raw GPS message menggunakan reference data di Redis.",
       "visual": "enrichment",
       "stages": [
         "consumer"
       ],
       "steps": [
-        "Mulai dari laporan GPS dan state bus sebelumnya.",
-        "Consumer lookup reference data di Redis berdasarkan body number, sehingga mengurangi database read per report.",
-        "Tambahkan assignment, route, trip, route geometry, dan stop sequence."
+        "Mulai dari raw GPS message yang sudah dinormalisasi.",
+        "Consumer lookup reference data di Redis dengan key bus, route, atau trip untuk menghindari database read per report.",
+        "Enriched message membawa raw GPS beserta context kendaraan dan perjalanan."
       ],
       "terms": [
         {
@@ -610,37 +624,26 @@ window.TRACKING = {
     },
     {
       "id": "eta",
-      "title": "ETA dan operational context",
-      "takeaway": "Jarak, kecepatan, posisi route geometry, dan hubungan antarbus.",
+      "title": "ETA: rumus dan contoh",
+      "takeaway": "Jarak tersisa pada route geometry dibagi kecepatan perhitungan.",
       "visual": "eta",
       "stages": [
         "consumer"
       ],
       "steps": [
-        "Hitung sisa jarak mengikuti route geometry menuju halte berikutnya.",
-        "ETA memakai jarak / kecepatan, dengan minimum perhitungan 30 km/jam.",
-        "Last stopping point UID adalah acuan posisi terakhir; position meter menghitung jarak pada route geometry.",
-        "Headway membaca hubungan antarbus; ETA tetap sebuah perkiraan."
+        "ETA dihitung dari jarak tersisa dibagi kecepatan perhitungan.",
+        "Implementasi memakai kecepatan minimum 30 km/jam; speed 24 dihitung sebagai 30.",
+        "Dengan jarak dalam meter dan speed dalam km/jam: ETA detik = (jarak / 1.000) / speed × 3.600.",
+        "Contoh 1.000 meter pada 30 km/jam menghasilkan 120 detik atau 2 menit."
       ],
       "terms": [
         {
           "term": "ETA",
           "def": "Perkiraan waktu tiba di pemberhentian.",
           "step": 0
-        },
-        {
-          "term": "position meter",
-          "def": "Posisi sepanjang acuan route geometry dalam meter.",
-          "step": 2
-        },
-        {
-          "term": "headway",
-          "def": "Jarak waktu atau posisi antarbus dalam context layanan.",
-          "step": 3
         }
       ],
-      "payload": "eta",
-      "substage": "ETA · progres · headway",
+      "substage": "ETA",
       "chapter": 2,
       "kicker": "11 / 18",
       "badge": "illustration"
@@ -670,6 +673,16 @@ window.TRACKING = {
           "term": "fan-out",
           "def": "Menyebarkan hasil ke beberapa jalur pemanfaatan.",
           "step": 1
+        },
+        {
+          "term": "position meter",
+          "def": "Posisi sepanjang acuan route geometry dalam meter.",
+          "step": 3
+        },
+        {
+          "term": "headway",
+          "def": "Jarak waktu atau posisi antarbus dalam context layanan.",
+          "step": 3
         }
       ],
       "payload": "final",
