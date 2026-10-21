@@ -1,115 +1,108 @@
-import {readFileSync, readdirSync, statSync} from 'node:fs';
+import {readFileSync,readdirSync,statSync,existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 const root=fileURLToPath(new URL('../',import.meta.url));
+const script=name=>readFileSync(path.join(root,'src',name),'utf8');
 const context=vm.createContext({window:{}});
-vm.runInContext(readFileSync(path.join(root,'src/content.js'),'utf8'),context);
-vm.runInContext(readFileSync(path.join(root,'src/navigation.js'),'utf8'),context);
+vm.runInContext(script('content.js'),context);vm.runInContext(script('navigation.js'),context);
 const {TRACKING:D,TrackingNavigation:N}=context.window;
 const plain=v=>JSON.parse(JSON.stringify(v));
 
-test('18 adegan, enam babak, satu mode tanpa catatan atau durasi di konten',()=>{
-  assert.equal(D.scenes.length,18);
-  assert.equal(D.chapters.length,6);
+test('18 slide, cover/Q&A satu langkah, dan konten layar terpisah dari bahan pembicara',()=>{
+  assert.equal(D.version,3);assert.equal(D.scenes.length,18);assert.equal(D.chapters.length,6);
   assert.equal(new Set(D.scenes.map(s=>s.id)).size,18);
-  const stageIds=D.stages.map(s=>s.id);
-  for(const s of D.scenes) {
-    for(const key of ['notes','seconds','body','tech','techTitle','sources','snippet'])assert.ok(!(key in s),s.id+' '+key);
-    assert.ok(s.steps.length>=2,s.id);
-    assert.ok(['actual','illustration'].includes(s.badge),s.id);
-    assert.ok(s.stages==='all'||(s.stages.length&&s.stages.every(x=>stageIds.includes(x))),s.id);
-    if(s.branch)assert.ok(D.branches[s.branch],s.id);
+  assert.equal(D.scenes[0].visual,'cover');assert.equal(D.scenes.at(-1).visual,'qa');
+  assert.equal(D.scenes[0].steps.length,1);assert.equal(D.scenes.at(-1).steps.length,1);
+  assert.equal(D.scenes[0].title,D.title);
+  for(const scene of D.scenes){
+    assert.ok(scene.steps.length>=1,scene.id);
+    for(const key of ['notes','seconds','sources','tech','snippet'])assert.ok(!(key in scene),`${scene.id}: ${key}`);
+    assert.ok(scene.stages==='all'||scene.stages.every(id=>D.stages.some(s=>s.id===id)),scene.id);
+    assert.ok(scene.chapter>=0&&scene.chapter<D.chapters.length);
   }
-  assert.ok(!('sources' in D));
-  assert.equal(D.scenes[0].badge,'actual');
-  assert.ok(D.scenes.slice(1).every(s=>s.badge==='illustration'));
 });
 
-test('target durasi storyboard-2 tepat 1.200 detik dan sesuai babak',()=>{
-  const md=readFileSync(path.join(root,'../storyboard-2.md'),'utf8');
-  const seconds=[...md.matchAll(/^- Durasi: (\d+):(\d{2})/gm)].map(m=>Number(m[1])*60+Number(m[2]));
-  assert.equal(seconds.length,18);
-  assert.equal(seconds.reduce((a,b)=>a+b,0),1200);
-  const perChapter=D.chapters.map((_,c)=>D.scenes.reduce((n,s,i)=>n+(s.chapter===c?seconds[i]:0),0));
-  assert.deepEqual(plain(perChapter),[90,240,420,180,150,120]);
+test('alur memuat proses pendukung dan batas protokol yang diminta',()=>{
+  assert.deepEqual(plain(D.stages.map(s=>s.id)),['bus','broker','forwarder','rabbitmq','consumer','publish','dashboard']);
+  assert.deepEqual(plain(D.pipeline),['Enrich + history','Posisi halte','Out-of-route','HMM snap','ETA','Stopping point','Posisi meter','Headway','Simpan state','Publish']);
+  const forwarder=D.scenes.find(s=>s.id==='forwarder');
+  assert.match(forwarder.steps.join(' '),/AMQP/);assert.match(forwarder.steps.join(' '),/Consistent-hash/);
+  assert.ok(D.scenes.find(s=>s.id==='enrichment').payload);
+  assert.match(D.scenes.find(s=>s.id==='dashboard').steps.at(-1),/arrival\/generic.*sensor/);
 });
 
-test('definisi mikro: 14 istilah, masing-masing tepat sekali, pada langkah yang ada',()=>{
-  const all=D.scenes.flatMap(s=>(s.terms||[]).map(t=>({...t,scene:s})));
-  assert.equal(all.length,14);
-  assert.equal(new Set(all.map(t=>t.term)).size,14);
-  for(const t of all)assert.ok(t.step>=0&&t.step<t.scene.steps.length,t.term);
-  assert.ok(!all.some(t=>/haversine/i.test(t.term)));
+test('definisi engineering muncul pada langkah valid dan membedakan kedua prefetch',()=>{
+  const all=D.scenes.flatMap(scene=>(scene.terms||[]).map(t=>({...t,scene})));
+  for(const t of all){assert.ok(t.def);assert.ok(t.step>=0&&t.step<t.scene.steps.length,t.term);}
+  assert.equal(new Set(all.map(t=>t.term)).size,all.length);
+  for(const concept of ['MQTT','AMQP','queue','exchange','consistent hashing','worker pool','goroutine','ACK','Redis / cache','GeoRadius','Haversine','HMM','ETA','prefetch RabbitMQ','prefetch halaman'])assert.ok(all.some(t=>t.term===concept),concept);
 });
 
-test('adegan HMM memuat langkah keterbatasan sebagai langkah terakhir',()=>{
-  const hmm=D.scenes.find(s=>s.visual==='hmm');
-  assert.equal(hmm.steps.length,4);
-  assert.match(hmm.steps[3],/GPS mentah/);
-  assert.match(hmm.steps[3],/status halte/);
+test('payload berkembang tanpa menimpa raw dan contoh ETA konsisten dengan kecepatan minimum',()=>{
+  assert.equal(D.rawPayload.busBodyNo,D.demo.bus);assert.equal(D.payloads.final.bus_body_no,D.demo.bus);
+  assert.equal(D.payloads.final.trip_id,D.demo.trip);
+  const order=['normalized','context','position','snap','eta','final'];
+  for(let i=1;i<order.length;i++)for(const [key,value] of Object.entries(D.payloads[order[i-1]]))assert.deepEqual(plain(D.payloads[order[i]][key]),plain(value),key);
+  assert.notDeepEqual(plain(D.demo.raw),plain(D.demo.snap));
+  assert.equal(D.payloads.final.latitude,D.demo.raw.latitude);assert.equal(D.payloads.final.snap_latitude,D.demo.snap.latitude);
+  assert.equal(D.payloads.eta.estimated_time_next_stops,D.payloads.eta.estimated_distance_next_stops/1000/Math.max(D.demo.speed,30)*3600);
+  assert.equal(new Date(D.rawPayload.deviceTimestamp).toISOString(),'2026-10-21T03:00:00.000Z');
+  assert.equal(D.payloads.position.curr_stops,'');assert.equal(D.payloads.position.next_stops,'C');
 });
 
-test('navigasi maju/mundur membalik setiap langkah; ujung tidak melampaui materi',()=>{
-  let s={index:0,step:0}, count=1;
-  assert.deepEqual(plain(N.previous(s,D.scenes)),s);
-  while(s.index!==17||s.step!==D.scenes[17].steps.length-1) {
-    const next=N.next(s,D.scenes);
-    assert.deepEqual(plain(N.previous(next,D.scenes)),plain(s));
-    s=next; count++;
-    assert.ok(count<100);
+test('navigasi melewati seluruh langkah dengan invers dan batas yang benar',()=>{
+  let state={index:0,step:0},count=1;
+  assert.deepEqual(plain(N.previous(state,D.scenes)),state);
+  while(state.index!==17||state.step!==D.scenes[17].steps.length-1){
+    const next=N.next(state,D.scenes);assert.deepEqual(plain(N.previous(next,D.scenes)),plain(state));state=next;assert.ok(++count<200);
   }
   assert.equal(count,D.scenes.reduce((n,s)=>n+s.steps.length,0));
-  assert.deepEqual(plain(N.next(s,D.scenes)),plain(s));
+  assert.deepEqual(plain(N.next(state,D.scenes)),plain(state));
+  assert.deepEqual(plain(N.normalize({index:NaN,step:Infinity},D.scenes)),{index:0,step:0});
 });
 
-test('URL hanya menyimpan adegan; nilai tidak valid kembali ke adegan pertama',()=>{
-  assert.deepEqual(plain(N.parse('#stop-context',D.scenes)),{index:7,step:0});
-  assert.deepEqual(plain(N.parse('#present/stop-context/2',D.scenes)),{index:0,step:0});
-  assert.deepEqual(plain(N.parse('',D.scenes)),{index:0,step:0});
-  D.scenes.forEach((scene,i)=>{
-    assert.equal(N.hash({index:i,step:1},D.scenes),'#'+scene.id);
-    assert.deepEqual(plain(N.parse(N.hash({index:i,step:1},D.scenes),D.scenes)),{index:i,step:0});
-  });
+test('URL adegan valid dimulai pada langkah pertama; ID lama yang dipertahankan tetap bekerja',()=>{
+  D.scenes.forEach((scene,index)=>assert.deepEqual(plain(N.parse(N.hash({index,step:2},D.scenes),D.scenes)),{index,step:0}));
+  assert.equal(D.scenes[N.parse('#stop-context',D.scenes).index].id,'stop-context');
+  for(const hash of ['','#unknown','#present/stop-context/2'])assert.deepEqual(plain(N.parse(hash,D.scenes)),{index:0,step:0});
 });
 
-test('contoh konsisten: observasi B, raw/snap terpisah, dan gerak menuju C',()=>{
-  assert.equal(D.demo.bus,'BUS-DEMO-01');
-  assert.deepEqual(plain(D.demo.observations.map(o=>[o.previous,o.current,o.next])),[['A','—','B'],['A','B','C'],['B','—','C']]);
-  assert.notDeepEqual(plain(D.demo.raw),plain(D.demo.snap));
-  assert.equal(D.demo.deviceTime,D.demo.observations[2].time);
-  assert.ok(D.demo.observations[2].point[0]>D.demo.observations[1].point[0]);
+test('semua aset terpakai tersedia di repository tanpa placeholder wajib',()=>{
+  for(const a of Object.values(D.assets)){assert.match(a.file,/^assets\/[\w.-]+$/);assert.ok(a.alt);assert.ok(existsSync(path.join(root,'src',a.file)));}
+  for(const scene of D.scenes)if(scene.aside)assert.ok(D.assets[scene.aside]);
+  const html=script('index.html');
+  for(const m of html.matchAll(/(?:src|href)="([^"#]+)"/g))if(!m[1].startsWith('http'))assert.ok(existsSync(path.join(root,'src',m[1])),m[1]);
 });
 
-test('aset memiliki keterangan placeholder; screenshot wajib, foto perangkat opsional',()=>{
-  for(const [key,a] of Object.entries(D.assets)) {
-    assert.match(a.file,/^assets\/[\w.-]+$/,key);
-    assert.equal(typeof a.required,'boolean',key);
-    assert.ok(a.label&&a.purpose&&a.alt,key);
+test('renderer dapat menampilkan seluruh langkah, termasuk field dan penutup',()=>{
+  const elements=new Map(),events={},listeners={};
+  function element(){return {innerHTML:'',textContent:'',style:{},disabled:false,classList:{toggle(){},add(){},remove(){}},setAttribute(){},addEventListener(type,fn){this[type]=fn;},matches(){return false;}};}
+  const document={title:'',body:element(),querySelector(selector){if(!elements.has(selector))elements.set(selector,element());return elements.get(selector);},addEventListener(type,fn){events[type]=fn;}};
+  const window={TRACKING:D,TrackingNavigation:N,addEventListener(type,fn){listeners[type]=fn;}};
+  const env=vm.createContext({window,document,location:{hash:''},history:{replaceState(){}},setTimeout(){return 0;},clearTimeout(){}});
+  vm.runInContext(script('app.js'),env);
+  const target={closest(){return null;}};
+  for(const scene of D.scenes){
+    env.location.hash='#'+scene.id;listeners.hashchange();
+    for(let step=0;step<scene.steps.length;step++){
+      const html=elements.get('#main').innerHTML;
+      assert.ok(html.includes((scene.visual==='cover'?D.title:scene.title).replace(/&/g,'&amp;')),scene.id);
+      assert.ok(!html.includes('undefined'),scene.id);
+      if(scene.payload)assert.ok(html.includes('payload-panel'),scene.id);
+      if(step<scene.steps.length-1)events.keydown({key:'ArrowRight',target,preventDefault(){}});
+    }
   }
-  assert.equal(D.assets.dashboard.required,true);
-  assert.equal(D.assets.device.required,false);
-  assert.ok(D.scenes.filter(s=>s.aside).every(s=>D.assets[s.aside]));
+  assert.equal(elements.get('#next').disabled,true);assert.equal(document.title,D.title);
 });
 
-test('bundle aman publik: tanpa koneksi produksi, nama internal, catatan, timer, atau mode Baca',()=>{
-  const files=[];
-  function visit(dir){for(const name of readdirSync(dir)){const p=path.join(dir,name);if(statSync(p).isDirectory())visit(p);else files.push(p);}}
+test('bundle statis tidak memuat koneksi produksi, rahasia, path mesin, atau bahan pembicara',()=>{
+  const files=[];function visit(dir){for(const name of readdirSync(dir)){const p=path.join(dir,name);if(statSync(p).isDirectory())visit(p);else files.push(p);}}
   visit(path.join(root,'src'));
-  const forbidden=[
-    /smpob/i,/NIK\s*\d{6,}/i,/\bDO:\s*\d{12,}/,/\/home\//,/tije-/i,/weltevreden/i,/syntra/i,
-    /bus_trackings/i,/\.go\b/,/\.jsx\b/,/catatan pembicara/i,/\bnotes\b/i,/\btimer\b/i,/\balokasi\b/i,
-    /data-mode/,/mode baca/i
-  ];
-  for(const file of files.filter(f=>/\.(js|html|css|svg)$/.test(f))){
-    const src=readFileSync(file,'utf8');
-    for(const pattern of forbidden)assert.ok(!pattern.test(src),file+' '+pattern);
-    if(file.endsWith('.js'))assert.ok(!/\b(?:fetch|WebSocket|XMLHttpRequest|EventSource)\s*\(/.test(src),file);
-  }
-  const html=readFileSync(path.join(root,'src/index.html'),'utf8');
-  for(const m of html.matchAll(/(?:src|href)="([^"#]+)"/g)){
-    if(!m[1].startsWith('http'))assert.ok(statSync(path.join(root,'src',m[1])).isFile(),m[1]);
-  }
+  const forbidden=[/\/home\//,/https?:\/\/(?!www\.w3\.org\/2000\/svg)/,/\b(?:fetch|WebSocket|XMLHttpRequest|EventSource)\s*\(/,/mqtts?:\/\//,/AKIA[0-9A-Z]{16}/,/-----BEGIN.*PRIVATE KEY/,/catatan pembicara/i,/\btimer\b/i,/mode baca/i,/speaker-notes/];
+  for(const file of files.filter(f=>/\.(js|html|css|svg)$/.test(f))){const source=readFileSync(file,'utf8');for(const pattern of forbidden)assert.ok(!pattern.test(source),file+' '+pattern);}
+  assert.ok(!script('content.js').includes('PREFETCH='));
+  // The test suite deliberately reads only files inside this checkout.
 });

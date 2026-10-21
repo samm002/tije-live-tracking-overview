@@ -1,36 +1,40 @@
-# A Glimpse Behind Live Tracking
+# Tijempolan: Live Tracking Overview
 
-Materi presentasi dalam bahasa Indonesia tentang perjalanan laporan GPS bus hingga menjadi marker di dashboard. Website menggunakan HTML, CSS, dan JavaScript statis serta dapat dijalankan secara lokal.
+Versi 3 — presentasi berbahasa Indonesia tentang perjalanan laporan GPS bus menjadi informasi dashboard. 18 slide dengan 55 langkah; alokasi narasi 23:15 di luar Q&A. Angka waktu merupakan target latihan, belum pengukuran penyampaian manusia.
 
 ## Menjalankan
 
-Dari direktori `website`:
+Dari folder repository ini:
 
 ```sh
-python3 -m http.server 9000 --directory src
+python3 -m http.server 9037 --bind 127.0.0.1 --directory src
 ```
-*9000 adalah port contoh, ganti sesuai kebutuhan*
 
-Buka `http://localhost:<port>` sesuai port yang Anda pilih. Tautan langsung memakai identitas adegan, misalnya `/#stop-context`. Setiap tautan membuka langkah pertama adegan tersebut.
+Buka [preview lokal](http://127.0.0.1:9037/). Port dapat diganti sesuai kebutuhan. Website statis tanpa dependency runtime eksternal atau koneksi ke sistem produksi.
 
 ## Navigasi
 
-Gunakan tombol Lanjut/Kembali, panah kanan/kiri, atau Space. Tombol kontrol tersembunyi ketika mouse diam. Tersedia pilihan layar penuh dan tombol Ulangi ilustrasi pada adegan animasi. Animasi mengikuti pengaturan `prefers-reduced-motion`.
+Panah kanan atau Space membuka langkah berikutnya, lalu slide berikutnya. Panah kiri membalik urutan. Cover dan Q&A masing-masing satu langkah. Tombol Kembali/Lanjut dan fullscreen muncul ketika mouse/touch aktif atau kontrol mendapat fokus keyboard. Animasi menghormati reduced motion.
+
+URL menyimpan ID slide, misalnya `#stop-context`; membuka URL memulai dari langkah pertama. ID tidak dikenal kembali ke cover. Judul tab selalu mengikuti judul materi.
 
 ## Mengubah materi
 
-- `src/content.js`: judul, langkah visual, definisi mikro, badge, peta mini, aset, dan nilai contoh.
-- `src/app.js`: tampilan presentasi, diagram, dan kontrol.
-- `src/style.css`: tata letak dan gaya visual.
-- `src/assets/`: aset yang digunakan website.
-- `tests/check.test.mjs`: pemeriksaan konten, navigasi, dan aset.
-- `archive/`: salinan tampilan sebelumnya yang tetap disimpan.
+- `src/content.js`: judul, 18 slide, langkah reveal, definisi, minimap, pipeline, aset, dan payload sintetis.
+- `src/app.js`: renderer diagram, panel field, cover/Q&A, kontrol, dan navigasi.
+- `src/style.css`: layout dan warna raw/snap/state.
+- `src/navigation.js`: aturan perpindahan langkah dan URL.
+- `src/assets/OBU.png`: foto perangkat dari pengguna, ditampilkan pada slide sumber data.
 
-Aset yang belum tersedia tampil sebagai placeholder berlabel. Letakkan file pada path yang tercatat di `ASSETS.md`; placeholder hilang setelah gambar berhasil dimuat.
+Payload dipakai sebagai ringkasan pedagogis field pilihan, bukan kontrak integrasi. Perhatikan bahwa source dan keluaran dapat memakai bentuk field berbeda. Raw dan snap tetap dipisahkan. Contoh ETA memakai 1.000 m dan kecepatan hitung minimum 30 km/jam sehingga 120 detik = dua menit.
+
+## Dokumen pendamping dan arsip
+
+Dokumen aktif berada **di luar root Git website**, pada parent `Materi`: [storyboard](../storyboard.md), [rencana website](../website-plan.md), [catatan pembicara](../speaker-notes.md), [bukti](../evidence-notes.md), [bahan Q&A](../qa-notes.md), dan [hasil pemeriksaan](../validation.md). Dokumen ini tidak muncul di UI atau disertakan pada repository website.
+
+Snapshot sebelum revisi, termasuk perubahan lokal pengguna, disimpan pada `../Draft/idea-2/`: dokumen bernama `*-2.md` dan source website tanpa metadata Git. Arsip versi sebelumnya tetap di `../Draft/`. Salinan repository website saja tidak mencakup dokumen/arsip parent tersebut.
 
 ## Pemeriksaan
-
-Jalankan dari direktori `website` setelah mengubah materi:
 
 ```sh
 node --test tests/check.test.mjs
@@ -39,8 +43,6 @@ node --check src/content.js
 node --check src/navigation.js
 ```
 
-## Catatan materi
+Pengujian utama tidak memerlukan dokumen di luar repository. Pemeriksaan durasi/storyboard dan browser dilakukan terpisah dan dicatat di `../validation.md`.
 
-Target durasi dan narasi acuan tersedia di `../storyboard-2.md`. Catatan pembicara disusun terpisah. Website tidak menampilkan mode Baca, catatan pembicara, atau timer.
-
-Nilai pada ilustrasi bukan pengukuran kapasitas, akurasi, atau SLA produksi. Aset dan versi sebelumnya dipertahankan saat materi diperbarui.
+Pengerjaan mengikuti skill Sites dengan preview lokal. Revisi ini tidak melakukan deployment atau push. Identitas hosting lama pada arsip merupakan catatan historis.

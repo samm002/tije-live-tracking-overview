@@ -1,37 +1,25 @@
-# Aset — Versi 2
+# Aset — Versi 3
 
-## dashboard-redacted-2.png — wajib, placeholder
+## OBU.png
 
-- Path: `dist/assets/dashboard-redacted-2.png`
-- Adegan: 1, visual cover.
-- Tujuan: contoh aktual hasil akhir live tracking.
-- Status: **placeholder**. File belum tersedia. Website menampilkan kotak berlabel sampai file diletakkan di path ini.
-- Redaksi: kotak opak di atas piksel asli, bukan suntingan AI.
-- Yang ditutup: identitas pramudi, NIK, nomor penugasan, nomor polisi, kode bodi, toolbar browser.
-- Yang tetap terlihat: nama koridor dan halte, status GPS, kecepatan, ETA, peta, marker.
-- Screenshot asli tidak dikemas di source maupun `dist/`.
-- `dashboard-redacted.png` versi 1 (suntingan AI) tidak dipakai lagi.
+- Path aktif: `src/assets/OBU.png`.
+- Sumber: aset pengguna yang sudah tersedia sebelum revisi.
+- Dipakai pada slide 4, Asal data: perangkat di bus.
+- Ditampilkan utuh dengan `object-fit: contain` dan label Contoh perangkat OBU. Foto tidak diedit.
+- Foto mengilustrasikan perangkat terpasang di bus; tidak membuktikan seluruh deployment atau tipe perangkat yang digunakan.
 
-## gps-device.jpg — opsional, placeholder
+## Diagram dan contoh data
 
-- Path: `dist/assets/gps-device.jpg`
-- Adegan: 2, samping payload.
-- Tujuan: menghubungkan laporan dengan perangkat di bus.
-- Status: **placeholder opsional**. Cerita lengkap tanpa foto.
-- Hindari nomor seri, kredensial, dan identitas individu.
+Diagram semantik dirender sebagai SVG native dalam `src/app.js`: bus → marker, protokol MQTT/AMQP, antrean dan worker pool, cache, urutan halte, raw/snap, ETA, publish, snapshot, penyimpanan, tradeoff, masalah operasional, dan rangkuman. Diagram/mockup dashboard diberi label Ilustrasi.
 
-## Diagram dan ikon
+Lintasan A–B–C adalah skema, bukan peta geografis. Nilai sintetis berada pada `src/content.js`: BUS-DEMO-01, TRIP-DEMO-ABC, R-DEMO, timestamp 21 Oktober 2026 10:00 WIB, raw/snap berbeda, speed 24 km/jam, sisa jarak 1.000 m, dan ETA hitung 120 detik.
 
-SVG asli untuk materi. Lintasan A–B–C adalah skema, bukan peta geografis.
+Warna: laporan/aliran biru; state/referensi ungu; raw jingga; snap teal; penyimpanan abu. `src/assets/favicon.svg` dipertahankan.
 
-Warna peran: biru laporan/dashboard, ungu referensi/state, jingga raw, hijau kebiruan hasil pencocokan, abu-abu penyimpanan.
+## Screenshot dashboard
 
-Favicon: `dist/assets/favicon.svg`.
+Tidak ada screenshot dashboard produksi pada bundle. Hook memakai mockup ilustratif sehingga tidak bergantung pada aset screenshot yang belum tersedia. Konfigurasi placeholder screenshot versi 2 dipertahankan hanya pada snapshot arsip.
 
-## Raw Payload — pembaruan adegan 2
+## Pengarsipan
 
-- Renderer aktif: `src/app.js`, dengan nilai JSON di `src/content.js` (`rawPayload`).
-- Judul kartu: **Raw Payload**; isi menggunakan nama field dan nilai yang diberikan pengguna.
-- Identitas contoh payload: `TJ-743`; sumber: `OBU`; timestamp perangkat dipertahankan sebagai angka `1792401704000`.
-- Tampilan sebelumnya (LAPORAN GPS) disimpan utuh di `archive/gps-report-before-json/`, termasuk renderer, konten, stylesheet, dan asetnya. Arsip tidak dimuat oleh website.
-- Nilai demo pada adegan lain tetap menggunakan ilustrasi A–B–C yang sudah ada.
+Versi 2 beserta OBU.png sudah disalin dan diverifikasi ke `../Draft/idea-2/website/`. Arsip lama pre-JSON tetap berada di `../Draft/archive/gps-report-before-json/`. Tidak ada folder archive aktif di repository website ini.
