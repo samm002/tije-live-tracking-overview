@@ -15,8 +15,8 @@
     }
     rows.push(line);return rows.map((r,i)=>text(x,y+i*leading,r,cls)).join('');
   }
-  function box(x,y,w,h,title,sub='',color='blue') {
-    return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="white" stroke="${colors[color]}" stroke-width="2"/><path d="M${x} ${y+15}v${h-30}" stroke="${colors[color]}" stroke-width="5"/>`+wrap(x+18,y+34,title,'svg-node-title',Math.floor((w-35)/12))+(sub?wrap(x+18,y+h-30,sub,'svg-small',Math.floor((w-35)/10),24):'')+'</g>';
+  function box(x,y,w,h,title,sub='',color='blue',titleClass='svg-node-title',titleLimit) {
+    return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="white" stroke="${colors[color]}" stroke-width="2"/><path d="M${x} ${y+15}v${h-30}" stroke="${colors[color]}" stroke-width="5"/>`+wrap(x+18,y+34,title,titleClass,titleLimit||Math.floor((w-35)/12))+(sub?wrap(x+18,y+h-30,sub,'svg-small',Math.floor((w-35)/10),24):'')+'</g>';
   }
   const arrow=(x1,y1,x2,y2,color='blue',dashed=false)=>`<path d="M${x1} ${y1}L${x2} ${y2}" fill="none" stroke="${colors[color]}" stroke-width="2.5" ${dashed?'stroke-dasharray="7 5"':''} marker-end="url(#arrow-${color})"/>`;
   const group=(on,html)=>`<g class="${on?'reveal-on':'reveal-dim'}">${html}</g>`;
@@ -31,67 +31,96 @@
   function pipeline() {
     return D.pipeline.map((label,i)=>{
       const x=15+(i<5?i:9-i)*198,y=75+Math.floor(i/5)*190;
-      return box(x,y,180,120,`${i+1}. ${label}`,'',i===9?'blue':'purple')+(i<4?arrow(x+180,y+60,x+195,y+60,'purple'):i>=5&&i<9?arrow(x,y+60,x-15,y+60,'purple'):'');
-    }).join('')+arrow(895,200,895,250,'purple')+text(500,32,'PROSES SATU LAPORAN GPS','svg-mono','middle');
+      return box(x,y,180,120,`${i+1}. ${label}`,'',i===9?'blue':'purple','svg-pipeline-title',15)+(i<4?arrow(x+180,y+60,x+195,y+60,'purple'):i>=5&&i<9?arrow(x,y+60,x-15,y+60,'purple'):'');
+    }).join('')+arrow(895,200,895,250,'purple')+text(500,32,'PROCESSING ONE GPS REPORT','svg-mono','middle');
   }
   function visual(scene,step) {
     const on=n=>step>=n,compact=Boolean(scene.payload&&scene.payload!=='raw'),w=compact?700:1000;
     let s='';
     switch(scene.visual) {
-      case 'hook':
-        s='<path d="M40 270H370" class="route-base"/>'+bus(190,255,'blue',D.demo.bus)+text(190,345,'Bus di jalan','svg-node-title','middle');
-        s+=group(on(1),arrow(365,230,560,230)+text(455,195,'data','svg-small','middle')+'<rect x="590" y="60" width="360" height="310" rx="12" fill="#f5f8fc" stroke="#cbd7e6"/><path d="M610 300L710 185L785 240L925 110M650 85L670 345M870 85L815 345" class="map-road"/>'+bus(785,240,'teal')+text(770,405,'Marker di dashboard','svg-node-title','middle'));
-        s+=group(on(2),text(460,285,'?','svg-big','middle'));break;
       case 'overview':
-        ['Bus','Broker MQTT','Forwarder','RabbitMQ','Consumer','Publish','Dashboard'].forEach((label,i)=>{
-          const x=i<4?20+i*250:270+(i-4)*250,y=i<4?70:275;
-          s+=group(i<4||on(1),box(x,y,210,115,label,'',i===4?'purple':'blue'));
-          if(i!==3&&i!==6)s+=group(i<3||on(1),arrow(x+210,y+57,x+243,y+57));
+        D.stages.forEach((stage,i)=>{
+          const x=i<4?20+i*250:270+(i-4)*250,y=i<4?45:200;
+          const sub=i===4?'Process + publish':i===5?'MQTT':'';
+          s+=group(i<4||on(1),box(x,y,210,100,stage.label,sub,i===4?'purple':'blue'));
+          if(i!==3&&i!==6)s+=group(i<3||on(1),arrow(x+210,y+50,x+243,y+50));
         });
-        s+=group(on(1),arrow(875,190,875,245)+arrow(875,245,375,245)+arrow(375,245,375,270));break;
+        s+=group(on(1),'<path data-connection="queue-consumer" d="M875 150V175H375V195" fill="none" stroke="'+colors.blue+'" stroke-width="2.5" marker-end="url(#arrow-blue)"/>'+
+          arrow(625,305,625,345,'gray',true)+box(450,350,370,100,'Downstream services','Upsert / processing','gray')+
+          text(35,405,'Dashed: downstream processing','svg-small'));
+        break;
       case 'broker':
-        s=box(25,135,255,150,'OBU / Module GPS','Publish','gray')+group(on(1),arrow(285,205,365,205)+box(370,135,255,150,'Broker terpusat','Topic → langganan'))+group(on(2),arrow(630,205,710,205)+box(715,135,255,150,'Forwarder','Subscriber'));
-        s+=text(325,175,'MQTT','svg-mono','middle')+text(670,175,'MQTT','svg-mono','middle')+text(500,355,'Topic sumber: emq/gps/#','svg-code','middle');break;
+        s=box(25,135,255,150,'OBU / Module GPS','Publish','gray')+group(on(1),arrow(285,205,365,205)+box(370,135,255,150,'Central broker','Topic → subscription'))+group(on(2),arrow(630,205,710,205)+box(715,135,255,150,'Forwarder','Subscriber'));
+        s+=text(325,175,'MQTT','svg-mono','middle')+text(670,175,'MQTT','svg-mono','middle')+text(500,355,'Publish topic: emq/gps/<source>/<busBodyNo>','svg-code','middle');break;
       case 'forwarder':
-        s=box(20,55,265,120,'Normalisasi','"24" → 24')+group(on(1),arrow(290,115,365,115)+box(370,55,265,120,'RabbitMQ','AMQP → exchange'))+group(on(2),arrow(640,115,725,115)+box(730,55,245,120,'Consistent hash','key: busBodyNo','purple'));
-        ['Queue A','Queue B','Queue C'].forEach((label,i)=>s+=group(on(2),box(120+i*300,290,225,105,label,i===1?D.demo.bus:'bus lain',i===1?'blue':'gray')));
-        s+=group(on(2),arrow(530,240,232,240,'gray',true)+arrow(232,240,232,285,'gray',true)+arrow(832,240,832,285,'gray',true)+arrow(850,180,850,240,'purple')+arrow(850,240,530,240,'purple')+arrow(530,240,530,285,'purple'))+group(on(3),text(500,435,'Queue disiapkan dari konfigurasi; bukan satu queue baru untuk setiap pesan.','svg-small','middle'));break;
+        s=box(20,55,265,120,'Normalization','speed: "24" → 24')+group(on(1),arrow(290,115,365,115)+box(370,55,265,120,'RabbitMQ','AMQP → exchange'))+group(on(2),arrow(640,115,725,115)+box(730,55,245,120,'Consistent hash','key: busBodyNo','purple'));
+        ['Queue A','Queue B','Queue C'].forEach((label,i)=>s+=group(on(2),box(120+i*300,290,225,105,label,i===1?D.demo.bus:'Other buses',i===1?'blue':'gray')));
+        s+=group(on(2),arrow(530,240,232,240,'gray',true)+arrow(232,240,232,285,'gray',true)+arrow(832,240,832,285,'gray',true)+arrow(850,180,850,240,'purple')+arrow(850,240,530,240,'purple')+arrow(530,240,530,285,'purple'))+group(on(3),text(500,435,'Configured queues; the same bus follows a consistent route.','svg-small','middle'));break;
       case 'consumer':
         if(step===3){s=pipeline();break;}
-        s=box(25,145,220,120,'Satu queue','Laporan banyak bus')+arrow(250,205,355,205)+box(360,145,240,120,'Hash bus → worker','FNV(bus) % poolSize','purple');
-        for(let i=0;i<4;i++)s+=box(740,20+i*102,220,88,'Goroutine '+(i+1),'',i===1?'purple':'gray');
-        s+=group(on(1),arrow(605,205,730,165,'purple')+text(500,80,'BUS-DEMO-01 → jalur yang sama','svg-node-title','middle'))+group(on(2),text(30,340,'Prefetch 4 · delivery belum di-ACK','svg-node-title')+text(30,378,'ACK mengakui delivery ke broker.','svg-small'))+text(30,435,'Contoh konfigurasi checkout: 100 queue × 4 = 400 slot / instance.','svg-small');break;
+        s=box(25,145,220,120,'Queue','Multi-bus reports')+arrow(250,205,355,205)+box(360,145,240,120,'Hash bus → worker','FNV(bus) % poolSize','purple');
+        for(let i=0;i<4;i++)s+=box(740,20+i*102,220,88,'Worker '+(i+1),'',i===1?'purple':'gray');
+        s+=group(on(1),arrow(605,205,730,165,'purple')+text(500,80,'TJ-123 → same worker','svg-node-title','middle'))+group(on(2),text(30,340,'Prefetch 4 · unacknowledged deliveries','svg-node-title')+text(30,378,'ACK confirms delivery handling.','svg-small'))+text(30,435,'Checkout config: 100 queue × 4 = 400 slot / instance.','svg-small');break;
       case 'enrichment':
-        s=box(15,165,210,130,'Laporan + state','BUS-DEMO-01')+group(on(1),box(265,20,245,100,'Cron API','Isi sebagian referensi','purple')+arrow(385,125,385,160,'purple')+box(265,165,245,130,'Redis','Konteks + referensi','purple')+arrow(230,230,260,230,'purple'))+group(on(2),arrow(515,230,555,230,'teal')+box(560,165,125,130,'Trip','A–B–C','teal'))+text(345,375,'Consumer membaca Redis; tidak HTTP call per laporan.','svg-small','middle');break;
+        s=box(15,165,210,130,'GPS report + state','TJ-123')+group(on(1),box(265,20,245,100,'Cron API','Reference by body number','purple')+arrow(385,125,385,160,'purple')+box(265,165,245,130,'Redis','Reference cache','purple')+arrow(230,230,260,230,'purple'))+group(on(2),arrow(515,230,555,230,'teal')+box(560,165,125,130,'Trip','A–B–C','teal'))+text(345,375,'Redis lookup by body number; fewer database reads.','svg-small','middle');break;
       case 'position':
-        s=route(true)+bus(470,190,'orange','raw · 10:00:00')+group(on(0),'<circle cx="470" cy="190" r="85" fill="#c4731510" stroke="#c47315" stroke-dasharray="7 5"/>')+group(on(1),arrow(370,125,430,155,'purple')+text(25,55,'Radius + urutan + arah + history','svg-node-title'))+group(on(2),tag(15,360,'Prev B','purple')+tag(200,360,'Current —')+tag(440,360,'Next C','teal')+text(350,415,'09:59:50 tiba B → 10:00:00 departure B','svg-small','middle'))+group(on(3),text(350,95,'Out-of-route: jarak raw terhadap lintasan','svg-small','middle'));break;
+        s=route(true)+bus(470,190,'orange','raw · 10:00:00')+group(on(0),'<circle cx="470" cy="190" r="85" fill="#c4731510" stroke="#c47315" stroke-dasharray="7 5"/>')+group(on(1),arrow(370,125,430,155,'purple')+text(25,55,'Radius + sequence + bearing + history','svg-node-title'))+group(on(2),tag(15,360,'Prev B','purple')+tag(200,360,'Current —')+tag(440,360,'Next C','teal')+text(350,415,'09:59:50 arrival B → 10:00:00 departure B','svg-small','middle'))+group(on(3),text(350,95,'Out-of-route: raw distance to trip geometry','svg-small','middle'));break;
       case 'snap': {
         const fallback=step===2;
         s=route(true)+`<circle cx="485" cy="165" r="12" fill="${colors.orange}"/>`+text(515,125,'Raw GPS','svg-node-title');
-        if(on(1)&&!fallback)s+=`<path d="M485 165L465 182" stroke="${colors.orange}" stroke-width="3" stroke-dasharray="5 5"/><circle cx="465" cy="182" r="12" fill="${colors.teal}"/>`+text(365,315,'Snap ke lintasan','svg-node-title');
-        s+=text(350,55,fallback?'Alternatif: pencocokan tidak valid':'Kandidat → arah → kesinambungan','svg-node-title','middle')+group(on(2),text(350,365,fallback?'Fallback → pakai raw':'Vehicle update memakai snap secara bersyarat.','svg-small','middle'))+group(on(3),text(350,410,'Status halte sudah dihitung dari raw sebelum snap.','svg-small','middle'));break;
+        if(on(1)&&!fallback)s+=`<path d="M485 165L465 182" stroke="${colors.orange}" stroke-width="3" stroke-dasharray="5 5"/><circle cx="465" cy="182" r="12" fill="${colors.teal}"/>`+text(365,315,'Snapped position','svg-node-title');
+        s+=text(350,55,fallback?'Fallback scenario':'Candidates → bearing → continuity','svg-node-title','middle')+group(on(2),text(350,365,fallback?'Fallback → raw GPS':'Snapped coordinates only when eligible.','svg-small','middle'))+group(on(3),text(350,410,'Stop status is computed from raw GPS before snap.','svg-small','middle'));break;
       }
       case 'eta':
-        s=text(350,80,'Sisa jarak rute → halte C','svg-node-title','middle')+text(350,155,'1.000 m','svg-big','middle')+group(on(1),text(350,225,'24 → minimum hitung 30 km/jam','svg-node-title','middle')+text(350,300,'ETA ≈ 2 menit','svg-big','middle'))+group(on(2),text(350,360,'Stopping point · posisi meter 1.240 m','svg-small','middle'))+group(on(3),text(350,408,'Headway · hubungan antarbus','svg-node-title','middle'));break;
+        s=text(350,80,'Remaining route distance → stop C','svg-node-title','middle')+text(350,155,'1.000 m','svg-big','middle')+group(on(1),text(350,225,'24 → minimum calculation speed 30 km/h','svg-node-title','middle')+text(350,300,'ETA ≈ 2 min','svg-big','middle'))+group(on(2),text(350,360,'Stopping point · position meter 1,240 m','svg-small','middle'))+group(on(3),text(350,408,'Headway · inter-bus context','svg-node-title','middle'));break;
       case 'publish':
-        s=box(10,40,265,105,'State Redis','history:<bus>','purple')+group(on(1),arrow(280,90,365,90)+box(370,40,315,105,'Publish MQTT','Hasil sesuai penerima'));
+        s=box(10,40,210,105,'Redis state','history:<bus>','purple')+
+          group(on(1),arrow(225,90,240,90)+box(245,40,210,105,'Consumer','Publish via MQTT','purple')+
+          arrow(460,90,475,90)+box(480,40,210,105,'Broker','Result delivery'));
         ['syntra/generic/<bus>','/vehicle-update/…/<bus>','syntra/gps_history/','syntra/arrival_history/'].forEach((topic,i)=>s+=group(on(i<2?1:2),text(30,205+i*52,topic,'svg-code')));
-        s+=group(on(3),text(350,430,'Sebagian keluaran adalah event bersyarat.','svg-small','middle'));break;
+        s+=group(on(3),text(350,430,'Some outputs are conditional events.','svg-small','middle'));break;
       case 'receivers':
-        s=box(20,55,240,115,'API / database','Snapshot awal','gray')+arrow(265,112,355,112,'gray')+box(360,55,255,115,'Dashboard','Live track + headway')+group(on(1),box(20,265,240,115,'MQTT','Vehicle update')+arrow(265,320,355,145)+text(415,225,'Pembaruan per bus','svg-small'))+group(on(2),box(700,55,275,145,'Celah halte','Arrival + generic + sensor','teal')+text(700,285,'Pemanfaatan lain: PIS / CC','svg-small')+text(700,320,'Mapping topic perlu verifikasi.','svg-small'))+text(500,430,'Prefetch halaman mengambil data awal; berbeda dari prefetch RabbitMQ.','svg-small','middle');break;
+        s=box(20,55,240,115,'API / database','Initial snapshot','gray')+arrow(265,112,355,112,'gray')+box(360,55,255,115,'Dashboard','Live track + headway')+group(on(1),box(20,265,240,115,'MQTT','Vehicle update')+arrow(265,320,355,145)+text(415,225,'Vehicle updates','svg-small'))+group(on(2),box(700,55,275,145,'Bus–platform gap','Arrival + generic + sensor','teal')+text(700,285,'Other consumers: PIS / CC','svg-small')+text(700,320,'Topic mapping unverified.','svg-small'))+text(500,430,'Page prefetch: initial snapshot, followed by live updates.','svg-small','middle');break;
       case 'storage':
-        s=box(20,65,420,115,'tije-bus-tracking','Latest GPS + enriched tracking','teal')+text(40,235,'UPSERT per bus','svg-big')+text(40,290,'bus_locations · bus_trackings','svg-code')+group(on(1),box(535,65,440,115,'tije-bus-histories','Rekaman historis','gray')+text(555,235,'INSERT rekaman baru','svg-node-title')+text(555,290,'gps_histories · arrival_histories','svg-code'))+group(on(2),text(555,350,'travel_time_segment','svg-code')+text(500,420,'State Redis, snapshot database, histori, dan model browser punya tujuan berbeda.','svg-small','middle'));break;
+        s=box(20,65,420,115,'tije-bus-tracking','Latest GPS + enriched tracking','teal')+text(40,235,'UPSERT per bus','svg-big')+text(40,290,'bus_locations · bus_trackings','svg-code')+group(on(1),box(535,65,440,115,'tije-bus-histories','Historical records','gray')+text(555,235,'INSERT new records','svg-node-title')+text(555,290,'gps_histories · arrival_histories','svg-code'))+group(on(2),text(555,350,'travel_time_segment','svg-code')+text(500,420,'Redis state, snapshot database, histori, dan model browser punya tujuan berbeda.','svg-small','middle'));break;
       case 'tradeoff':
-        s=text(500,75,'Bus × frekuensi laporan × masa simpan','svg-node-title','middle');
+        s=text(500,75,'Buses × report rate × retention','svg-node-title','middle');
         [80,140,230,340].forEach((h,i)=>s+=`<rect x="${100+i*135}" y="${390-h}" width="75" height="${h}" rx="4" fill="${colors.gray}" fill-opacity="${.18+i*.16}"/>`);
-        s+=text(310,425,'Pertumbuhan ilustratif','svg-small','middle')+group(on(1),text(665,145,'Manfaat analisis','svg-node-title')+text(665,190,'Biaya simpan + baca','svg-node-title'))+group(on(2),text(665,280,'Opsi pengelolaan','svg-node-title')+text(665,325,'Retensi · partisi · arsip','svg-small')+text(665,370,'Sesuai kebutuhan data.','svg-small'));break;
+        s+=text(310,425,'Illustrative growth','svg-small','middle')+group(on(1),text(665,145,'Analytical value','svg-node-title')+text(665,190,'Storage + query cost','svg-node-title'))+group(on(2),text(665,280,'Management options','svg-node-title')+text(665,325,'Retention · partitioning · archiving','svg-small')+text(665,370,'Based on data requirements.','svg-small'));break;
       case 'issues': {
-        const cases=[['Queue menumpuk','Laju masuk > laju proses','Proses berat / dependensi lambat / beban timpang','Pantau laju, umur pesan, dan bottleneck sebelum scaling.'],['Data terlambat / putus','Marker tertinggal atau berhenti','Koneksi perangkat / broker / jalur penerima','Periksa timestamp, koneksi, reconnect, dan subscriber.'],['Marker ≠ status halte','Tampak di halte, arrival belum terdeteksi','Raw/snap berbeda / referensi atau state usang','Bandingkan raw, snap, trip, urutan, radius, dan state.']];
+        const cases=[['Queue backlog','Input rate > processing rate','Processing berat, dependency lambat, atau load tidak merata.','Pantau throughput, message age, dan bottleneck sebelum scaling.'],['Delayed / missing updates','Marker tertinggal atau berhenti','Koneksi device, broker, atau subscriber terganggu.','Bandingkan timestamp; periksa koneksi, reconnect, dan subscriber.'],['Marker vs stop status','Marker tampak di stop; arrival belum terdeteksi','Raw/snap berbeda, reference data atau state usang.','Bandingkan raw, snap, trip, radius, stop sequence, dan state.']];
         const [title,symptom,cause,action]=cases[step];
-        s=text(45,65,title,'svg-big')+text(45,135,'GEJALA','svg-mono')+text(45,180,symptom,'svg-node-title')+text(45,245,'KEMUNGKINAN PENYEBAB','svg-mono')+text(45,290,cause,'svg-node-title')+'<path d="M45 325H950" stroke="#dce5ef"/>'+text(45,365,'DIAGNOSIS / OPSI MITIGASI','svg-mono')+text(45,410,action,'svg-text');break;
+        s=text(30,52,title,'svg-issue-title')+
+          text(570,110,'SYMPTOM','svg-mono')+wrap(570,145,symptom,'svg-text',34,28)+
+          text(570,235,'POSSIBLE CAUSE','svg-mono')+wrap(570,270,cause,'svg-small',36,27)+
+          text(570,360,'MITIGATION','svg-mono')+wrap(570,395,action,'svg-small',36,27);
+        if(step===0) {
+          s+=text(45,120,'Incoming reports','svg-node-title');
+          for(let i=0;i<6;i++)s+='<rect x="'+(55+i*46)+'" y="145" width="32" height="24" rx="3" fill="'+colors.blue+'"/>';
+          s+=arrow(190,175,190,215)+box(40,220,300,90,'Queue','','blue');
+          for(let i=0;i<6;i++)s+='<rect x="'+(55+i*45)+'" y="269" width="30" height="25" rx="3" fill="'+colors.orange+'"/>';
+          s+=arrow(345,265,385,265)+box(390,220,140,90,'Worker','','purple')+
+            text(285,365,'Input rate > processing rate','svg-node-title','middle')+
+            text(285,410,'Messages wait longer in the queue.','svg-small','middle');
+        } else if(step===1) {
+          s+=bus(90,195,'orange',D.demo.bus)+arrow(130,195,215,195,'gray',true)+
+            box(220,145,135,105,'Broker','','blue')+arrow(360,195,390,195,'gray',true)+
+            box(395,145,145,105,'Screen','','gray')+
+            text(90,295,'10:00:00','svg-node-title','middle')+text(465,295,'10:00:10','svg-node-title','middle')+
+            tag(130,365,'Report age: 10 s','orange')+
+            text(285,420,'Illustrative timestamps; not a latency SLA.','svg-small','middle');
+        } else {
+          s+='<path d="M50 240H510" class="route-base"/><path d="M50 240H510" class="route-line"/>'+
+            '<circle cx="360" cy="240" r="58" fill="#2463eb09" stroke="'+colors.blue+'" stroke-dasharray="6 5"/>'+
+            '<circle cx="300" cy="130" r="12" fill="'+colors.orange+'"/>'+text(225,100,'Raw GPS','svg-node-title')+
+            arrow(300,145,355,220,'orange',true)+bus(360,240,'teal')+text(360,320,'Stop B','svg-node-title','middle')+
+            text(285,375,'Raw outside stop radius → no arrival','svg-small','middle')+
+            text(285,420,'Snapped marker appears at the stop.','svg-small','middle');
+        }
+        break;
       }
       case 'recap':
-        s=group(on(0),box(20,135,250,150,'Observasi','Identitas + GPS + waktu'))+group(on(1),arrow(275,210,360,210)+box(365,135,265,150,'Pengolahan','Konteks + state + hitung','purple'))+group(on(2),arrow(635,210,715,210,'teal')+box(720,135,260,150,'Informasi','Dashboard + layanan + histori','teal')+text(500,380,'Periksa kesegaran data. Baca ETA sebagai perkiraan.','svg-node-title','middle'));break;
+        s=group(on(0),box(20,135,250,150,'Observation','Identity + GPS + time'))+group(on(1),arrow(275,210,360,210)+box(365,135,265,150,'Processing','Context + state + calculations','purple'))+group(on(2),arrow(635,210,715,210,'teal')+box(720,135,260,150,'Information','Dashboard + services + history','teal')+text(500,380,'Check freshness. Read ETA as an estimate.','svg-node-title','middle'));break;
     }
     const defs='<defs>'+Object.keys(colors).map(c=>`<marker id="arrow-${c}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="${colors[c]}"/></marker>`).join('')+'</defs>';
     return `<svg class="diagram" viewBox="0 0 ${w} 460" role="img" aria-label="${esc(scene.takeaway)}">${defs}${s}</svg>`;
@@ -104,7 +133,7 @@
         const visible=key==='busBodyNo'||key==='source'||(key==='deviceTimestamp'?step>=2:step>=1);
         return `<span class="json-row${visible?'':' is-pending'}"><span class="json-key">${esc('  '+JSON.stringify(key)+': ')}</span>${esc(JSON.stringify(value))}${i<entries.length-1?',':''}</span>`;
       }).join('\n');
-      return `<aside class="payload-panel" aria-label="Raw Payload JSON"><p class="payload-label">Raw Payload · Ilustrasi</p><pre class="raw-json">{\n${rows}\n}</pre><p class="payload-caption">Timestamp milidetik · 21 Oktober 2026, 10:00 WIB</p></aside>`;
+      return `<aside class="payload-panel" aria-label="Raw Payload JSON"><p class="payload-label">Raw Payload · Illustration</p><pre class="raw-json">{\n${rows}\n}</pre><p class="payload-caption">Device timestamp (ms) · 21 Oct 2026, 10:00 WIB</p></aside>`;
     }
     if(stage==='raw')fields=Object.keys(snapshot);
     else if(stage==='context')fields=['bus_body_no',...D.additions.context];
@@ -120,30 +149,43 @@
       if(alternative)value=null;
       return `<div class="payload-row${additions.includes(key)&&!alternative?' is-new':''}${stage==='raw'&&!visible?' is-pending':''}"><dt>${esc(key)}</dt><dd>${esc(JSON.stringify(value))}</dd></div>`;
     }).join('');
-    return `<aside class="payload-panel" aria-label="Field pilihan payload ${esc(stage)}"><p class="payload-label">${stage==='raw'?'Raw Payload':'Payload · '+esc(D.demo.bus)}</p><dl>${rows}</dl><p class="payload-caption">${stage==='raw'?'JSON ilustratif · 10:00 WIB':stage==='snap'&&step===2?'Alternatif fallback · snap tidak tersedia':stage==='eta'?'ETA 120 detik = 2 menit · field pilihan':'Field pilihan · tambahan disorot'}</p></aside>`;
+    return `<aside class="payload-panel" aria-label="Selected payload fields: ${esc(stage)}"><p class="payload-label">Payload · ${esc(D.demo.bus)}</p><dl>${rows}</dl><p class="payload-caption">${stage==='snap'&&step===2?'Fallback scenario · no snapped coordinates':stage==='eta'?'ETA 120 s = 2 min · selected fields':'Selected fields · additions highlighted'}</p></aside>`;
   }
   function minimap(scene,step) {
     if(['cover','qa'].includes(scene.visual))return '';
-    return `<ol class="minimap${scene.recapStep!==undefined&&step>=scene.recapStep?' is-recap':''}">`+D.stages.map((st,i)=>`<li class="${scene.stages==='all'||scene.stages.includes(st.id)?'is-on':''}" style="--i:${i}">${esc(st.label)}${st.id==='publish'&&scene.branch?`<span class="minimap-branch">↳ ${esc(D.branches[scene.branch])}</span>`:''}</li>`).join('')+'</ol>';
+    return `<ol class="minimap${scene.recapStep!==undefined&&step>=scene.recapStep?' is-recap':''}">`+D.stages.map((st,i)=>`<li class="${scene.stages==='all'||scene.stages.includes(st.id)?'is-on':''}" style="--i:${i}">${esc(st.label)}${st.id==='output-broker'&&scene.branch?`<span class="minimap-branch">↳ ${esc(D.branches[scene.branch])}</span>`:''}</li>`).join('')+'</ol>';
   }
   function narrative(scene,step) {
     const terms=(scene.terms||[]).filter(t=>t.step===step);
-    return `<footer class="stage-foot"><div class="step-narrative" aria-live="polite"><span>${step+1} / ${scene.steps.length}</span><p>${esc(scene.steps[step])}</p></div>`+(terms.length?'<dl class="terms">'+terms.map(t=>`<div><dt>${esc(t.term)}</dt><dd>${esc(t.def)}</dd></div>`).join('')+'</dl>':'')+(scene.analogy?`<p class="analogy">${esc(scene.analogy)}</p>`:'')+'</footer>';
+    return `<footer class="stage-foot"><div class="step-narrative" aria-live="polite"><span>${step+1} / ${scene.steps.length}</span><p>${esc(scene.steps[step])}</p></div>`+(terms.length?'<dl class="terms">'+terms.map(t=>`<div><dt>${esc(t.term)}</dt><dd>${esc(t.def)}</dd></div>`).join('')+'</dl>':'')+'</footer>';
+  }
+  function photoSlot(key) {
+    const asset=D.assets[key];
+    return `<div class="photo-slot"><img src="${esc(asset.file)}" alt="${esc(asset.alt)}"><div class="photo-placeholder"><span>PHOTO PLACEHOLDER</span><strong>${esc(asset.label)}</strong><code>${esc(asset.file)}</code></div></div>`;
+  }
+  function hookFigure(step) {
+    return `<figure class="figure hook-figure"><div class="hook-photo">${photoSlot('busPhoto')}<figcaption>Bus on the road</figcaption></div>`+
+      `<div class="hook-connection${step<1?' is-pending':''}" aria-label="data flow"><span>data</span><svg viewBox="0 0 120 45" aria-hidden="true"><path d="M5 22H108M91 8L110 22L91 36"/></svg><strong>${step>=2?'?':''}</strong></div>`+
+      `<div class="hook-photo${step<1?' is-pending':''}">${photoSlot('dashboardPhoto')}<figcaption>Live tracking dashboard</figcaption></div></figure>`;
   }
   function sceneHtml(scene,step) {
-    if(scene.visual==='cover')return `<section class="stage bookend"><p class="cover-meta">TIJEMPOLAN · SEBUAH PERJALANAN DATA</p><h1>${esc(D.title)}</h1><p>${esc(scene.takeaway)}</p><div class="cover-route" aria-hidden="true">● ── ● ── ●</div></section>`;
+    if(scene.visual==='cover')return `<section class="stage bookend"><h1>${esc(D.title)}</h1><div class="cover-route" aria-hidden="true">● ── ● ── ●</div></section>`;
     if(scene.visual==='qa')return `<section class="stage bookend is-qa"><p class="cover-meta">TIJEMPOLAN</p><h1>${esc(scene.title)}</h1><p>${esc(scene.takeaway)}</p></section>`;
     let figure;
-    if(scene.visual==='source') {
+    if(scene.visual==='hook')figure=hookFigure(step);
+    else if(scene.visual==='source') {
       const a=D.assets[scene.aside];
-      figure=`<figure class="figure source-figure"><div class="device-photo"><img src="${esc(a.file)}" alt="${esc(a.alt)}"><figcaption>Contoh perangkat OBU</figcaption></div>${payloadPanel(scene,step)}<div class="source-topic">MQTT → <code>emq/gps/#</code><span>pola langganan sumber pada konfigurasi contoh</span></div></figure>`;
+      figure=`<figure class="figure source-figure"><div class="device-photo"><img src="${esc(a.file)}" alt="${esc(a.alt)}"><figcaption>On-board unit</figcaption></div>${payloadPanel(scene,step)}<div class="source-topic">MQTT publish → <code>${esc(D.sourceTopic)}</code><span>Example: ${esc(D.sourceTopicExample)}</span></div></figure>`;
     } else figure=`<figure class="figure${scene.payload?' has-payload':''}"><span class="evidence-badge">Ilustrasi</span><div class="figure-canvas">${visual(scene,step)}</div>${scene.payload?payloadPanel(scene,step):''}</figure>`;
-    const context=scene.substage?`Consumer / ${scene.substage}`:scene.branch?`Publish / ${D.branches[scene.branch]}`:D.chapters[scene.chapter];
+    const context=scene.substage?`Consumer / ${scene.substage}`:scene.branch?`Broker / ${D.branches[scene.branch]}`:D.chapters[scene.chapter];
     return `<section class="stage"><div class="eyebrow"><span>${esc(context)}</span><span>${esc(scene.kicker)}</span></div><div class="stage-title"><h1>${esc(scene.title)}</h1><p>${esc(scene.takeaway)}</p></div>${figure}${narrative(scene,step)}</section>`;
   }
   function render() {
     const scene=D.scenes[state.index];
     $('#minimap').innerHTML=minimap(scene,state.step);$('#main').innerHTML=sceneHtml(scene,state.step);
+    document.querySelectorAll('.photo-slot img').forEach(img=>{
+      if(img.complete&&img.naturalWidth)img.closest('.photo-slot').classList.add('is-loaded');
+    });
     document.body.classList.toggle('is-bookend',['cover','qa'].includes(scene.visual));
     const done=D.scenes.slice(0,state.index).reduce((n,s)=>n+s.steps.length,0)+state.step+1;
     $('#progress-bar').style.width=(done/totalSteps*100)+'%';
@@ -159,6 +201,9 @@
     idleHandle=setTimeout(()=>{if(!$('.controls').matches(':hover,:focus-within'))document.body.classList.add('is-idle');},2500);
   }
   ['mousemove','mousedown','touchstart','focusin'].forEach(type=>document.addEventListener(type,wake,{passive:true}));
+  document.addEventListener('load',event=>{
+    if(event.target.matches&&event.target.matches('.photo-slot img'))event.target.closest('.photo-slot').classList.add('is-loaded');
+  },true);
   $('#next').addEventListener('click',()=>go(N.next(state,D.scenes)));$('#previous').addEventListener('click',()=>go(N.previous(state,D.scenes)));
   $('#fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{$('#fullscreen').textContent='Gunakan fullscreen browser';}});
   document.addEventListener('fullscreenchange',()=>$('#fullscreen').textContent=document.fullscreenElement?'Keluar layar penuh':'Layar penuh');

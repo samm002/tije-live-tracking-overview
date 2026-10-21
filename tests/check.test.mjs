@@ -17,17 +17,19 @@ test('18 slide, cover/Q&A satu langkah, dan konten layar terpisah dari bahan pem
   assert.equal(D.scenes[0].visual,'cover');assert.equal(D.scenes.at(-1).visual,'qa');
   assert.equal(D.scenes[0].steps.length,1);assert.equal(D.scenes.at(-1).steps.length,1);
   assert.equal(D.scenes[0].title,D.title);
+  assert.equal(D.title,'A Glimpse Behind Live Tracking: From Bus to Dashboard');
   for(const scene of D.scenes){
     assert.ok(scene.steps.length>=1,scene.id);
-    for(const key of ['notes','seconds','sources','tech','snippet'])assert.ok(!(key in scene),`${scene.id}: ${key}`);
+    for(const key of ['notes','seconds','sources','tech','snippet','analogy'])assert.ok(!(key in scene),`${scene.id}: ${key}`);
     assert.ok(scene.stages==='all'||scene.stages.every(id=>D.stages.some(s=>s.id===id)),scene.id);
     assert.ok(scene.chapter>=0&&scene.chapter<D.chapters.length);
   }
 });
 
 test('alur memuat proses pendukung dan batas protokol yang diminta',()=>{
-  assert.deepEqual(plain(D.stages.map(s=>s.id)),['bus','broker','forwarder','rabbitmq','consumer','publish','dashboard']);
-  assert.deepEqual(plain(D.pipeline),['Enrich + history','Posisi halte','Out-of-route','HMM snap','ETA','Stopping point','Posisi meter','Headway','Simpan state','Publish']);
+  assert.deepEqual(plain(D.stages.map(s=>s.id)),['bus','broker','forwarder','rabbitmq','consumer','output-broker','dashboard']);
+  assert.deepEqual(plain(D.stages.map(s=>s.label)),['Bus','Broker','Forwarder','Queue','Consumer','Broker','Dashboard']);
+  assert.deepEqual(plain(D.pipeline),['Enrich + history','Stop position','Out-of-route','HMM snap','ETA','Stopping point','Position meter','Headway','Save state','Publish']);
   const forwarder=D.scenes.find(s=>s.id==='forwarder');
   assert.match(forwarder.steps.join(' '),/AMQP/);assert.match(forwarder.steps.join(' '),/Consistent-hash/);
   assert.ok(D.scenes.find(s=>s.id==='enrichment').payload);
@@ -38,11 +40,14 @@ test('definisi engineering muncul pada langkah valid dan membedakan kedua prefet
   const all=D.scenes.flatMap(scene=>(scene.terms||[]).map(t=>({...t,scene})));
   for(const t of all){assert.ok(t.def);assert.ok(t.step>=0&&t.step<t.scene.steps.length,t.term);}
   assert.equal(new Set(all.map(t=>t.term)).size,all.length);
-  for(const concept of ['MQTT','AMQP','queue','exchange','consistent hashing','worker pool','goroutine','ACK','Redis / cache','GeoRadius','Haversine','HMM','ETA','prefetch RabbitMQ','prefetch halaman'])assert.ok(all.some(t=>t.term===concept),concept);
+  for(const concept of ['MQTT','AMQP','queue','exchange','consistent hashing','worker pool','worker','ACK','Redis / cache','GeoRadius','Haversine','HMM','ETA','prefetch RabbitMQ','page prefetch'])assert.ok(all.some(t=>t.term===concept),concept);
 });
 
 test('payload berkembang tanpa menimpa raw dan contoh ETA konsisten dengan kecepatan minimum',()=>{
   assert.equal(D.rawPayload.busBodyNo,D.demo.bus);assert.equal(D.payloads.final.bus_body_no,D.demo.bus);
+  assert.equal(D.demo.bus,'TJ-123');
+  assert.equal(D.sourceTopic,'emq/gps/<source>/<busBodyNo>');
+  assert.equal(D.sourceTopicExample,'emq/gps/OBU/TJ-123');
   assert.equal(D.payloads.final.trip_id,D.demo.trip);
   const order=['normalized','context','position','snap','eta','final'];
   for(let i=1;i<order.length;i++)for(const [key,value] of Object.entries(D.payloads[order[i-1]]))assert.deepEqual(plain(D.payloads[order[i]][key]),plain(value),key);
@@ -70,8 +75,10 @@ test('URL adegan valid dimulai pada langkah pertama; ID lama yang dipertahankan 
   for(const hash of ['','#unknown','#present/stop-context/2'])assert.deepEqual(plain(N.parse(hash,D.scenes)),{index:0,step:0});
 });
 
-test('semua aset terpakai tersedia di repository tanpa placeholder wajib',()=>{
-  for(const a of Object.values(D.assets)){assert.match(a.file,/^assets\/[\w.-]+$/);assert.ok(a.alt);assert.ok(existsSync(path.join(root,'src',a.file)));}
+test('aset wajib tersedia; slot foto opsional mendukung placeholder',()=>{
+  for(const a of Object.values(D.assets)){assert.match(a.file,/^assets\/[\w.-]+$/);assert.ok(a.alt);if(a.required)assert.ok(existsSync(path.join(root,'src',a.file)));else assert.equal(a.placeholder,true);}
+  assert.equal(D.assets.busPhoto.file,'assets/bus-on-road.jpg');
+  assert.equal(D.assets.dashboardPhoto.file,'assets/dashboard-live-tracking.png');
   for(const scene of D.scenes)if(scene.aside)assert.ok(D.assets[scene.aside]);
   const html=script('index.html');
   for(const m of html.matchAll(/(?:src|href)="([^"#]+)"/g))if(!m[1].startsWith('http'))assert.ok(existsSync(path.join(root,'src',m[1])),m[1]);
@@ -80,7 +87,7 @@ test('semua aset terpakai tersedia di repository tanpa placeholder wajib',()=>{
 test('renderer dapat menampilkan seluruh langkah, termasuk field dan penutup',()=>{
   const elements=new Map(),events={},listeners={};
   function element(){return {innerHTML:'',textContent:'',style:{},disabled:false,classList:{toggle(){},add(){},remove(){}},setAttribute(){},addEventListener(type,fn){this[type]=fn;},matches(){return false;}};}
-  const document={title:'',body:element(),querySelector(selector){if(!elements.has(selector))elements.set(selector,element());return elements.get(selector);},addEventListener(type,fn){events[type]=fn;}};
+  const document={title:'',body:element(),querySelectorAll(){return [];},querySelector(selector){if(!elements.has(selector))elements.set(selector,element());return elements.get(selector);},addEventListener(type,fn){events[type]=fn;}};
   const window={TRACKING:D,TrackingNavigation:N,addEventListener(type,fn){listeners[type]=fn;}};
   const env=vm.createContext({window,document,location:{hash:''},history:{replaceState(){}},setTimeout(){return 0;},clearTimeout(){}});
   vm.runInContext(script('app.js'),env);
@@ -91,7 +98,17 @@ test('renderer dapat menampilkan seluruh langkah, termasuk field dan penutup',()
       const html=elements.get('#main').innerHTML;
       assert.ok(html.includes((scene.visual==='cover'?D.title:scene.title).replace(/&/g,'&amp;')),scene.id);
       assert.ok(!html.includes('undefined'),scene.id);
+      assert.ok(!html.includes('class="analogy"'),scene.id);
       if(scene.payload)assert.ok(html.includes('payload-panel'),scene.id);
+      if(scene.visual==='hook')assert.ok(html.includes('photo-placeholder'),scene.id);
+      if(scene.visual==='overview'){
+        assert.ok(html.includes('Process + publish'));
+        assert.ok(html.includes('Downstream services'));
+        assert.equal((html.match(/data-connection="queue-consumer"/g)||[]).length,1);
+        const connector=html.match(/<path data-connection="queue-consumer"[^>]+>/)[0];
+        assert.equal((connector.match(/marker-end=/g)||[]).length,1);
+        assert.ok(html.includes('stroke-dasharray="7 5"'));
+      }
       if(step<scene.steps.length-1)events.keydown({key:'ArrowRight',target,preventDefault(){}});
     }
   }

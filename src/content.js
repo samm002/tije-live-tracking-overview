@@ -1,14 +1,14 @@
 /* Versi 3 — sumber tunggal konten layar dan contoh sintetis. */
 window.TRACKING = {
   "version": 3,
-  "title": "Tijempolan: Live Tracking Overview",
+  "title": "A Glimpse Behind Live Tracking: From Bus to Dashboard",
   "chapters": [
-    "Pembuka",
-    "Dari perangkat ke antrean",
-    "Di dalam consumer",
-    "Hasil dan pemanfaatan",
-    "Tradeoff dan operasi",
-    "Penutup"
+    "Introduction",
+    "Device to queue",
+    "Consumer processing",
+    "Outputs and consumers",
+    "Tradeoffs and operations",
+    "Closing"
   ],
   "stages": [
     {
@@ -17,7 +17,7 @@ window.TRACKING = {
     },
     {
       "id": "broker",
-      "label": "Broker MQTT"
+      "label": "Broker"
     },
     {
       "id": "forwarder",
@@ -25,15 +25,15 @@ window.TRACKING = {
     },
     {
       "id": "rabbitmq",
-      "label": "RabbitMQ"
+      "label": "Queue"
     },
     {
       "id": "consumer",
       "label": "Consumer"
     },
     {
-      "id": "publish",
-      "label": "Publish"
+      "id": "output-broker",
+      "label": "Broker"
     },
     {
       "id": "dashboard",
@@ -41,8 +41,8 @@ window.TRACKING = {
     }
   ],
   "branches": {
-    "storage": "Penyimpanan",
-    "uses": "Pemanfaatan"
+    "storage": "Storage",
+    "uses": "Services"
   },
   "assets": {
     "device": {
@@ -50,10 +50,24 @@ window.TRACKING = {
       "label": "OBU di kendaraan",
       "alt": "Perangkat OBU terpasang di kabin bus dengan layar informasi perjalanan.",
       "required": true
+    },
+    "busPhoto": {
+      "file": "assets/bus-on-road.jpg",
+      "label": "Bus on the road",
+      "alt": "Foto asli bus yang sedang berada di jalan.",
+      "required": false,
+      "placeholder": true
+    },
+    "dashboardPhoto": {
+      "file": "assets/dashboard-live-tracking.png",
+      "label": "Live tracking dashboard",
+      "alt": "Screenshot asli dashboard live tracking.",
+      "required": false,
+      "placeholder": true
     }
   },
   "demo": {
-    "bus": "BUS-DEMO-01",
+    "bus": "TJ-123",
     "trip": "TRIP-DEMO-ABC",
     "raw": {
       "latitude": -6.18125,
@@ -91,7 +105,7 @@ window.TRACKING = {
     ]
   },
   "rawPayload": {
-    "busBodyNo": "BUS-DEMO-01",
+    "busBodyNo": "TJ-123",
     "latitude": -6.18125,
     "longitude": 106.8111,
     "speed": 24,
@@ -101,7 +115,7 @@ window.TRACKING = {
   },
   "payloads": {
     "raw": {
-      "busBodyNo": "BUS-DEMO-01",
+      "busBodyNo": "TJ-123",
       "latitude": -6.18125,
       "longitude": 106.8111,
       "speed": 24,
@@ -110,7 +124,7 @@ window.TRACKING = {
       "deviceTimestamp": 1792551600000
     },
     "normalized": {
-      "bus_body_no": "BUS-DEMO-01",
+      "bus_body_no": "TJ-123",
       "latitude": -6.18125,
       "longitude": 106.8111,
       "speed": 24,
@@ -119,7 +133,7 @@ window.TRACKING = {
       "deviceTimestamp": 1792551600000
     },
     "context": {
-      "bus_body_no": "BUS-DEMO-01",
+      "bus_body_no": "TJ-123",
       "latitude": -6.18125,
       "longitude": 106.8111,
       "speed": 24,
@@ -132,7 +146,7 @@ window.TRACKING = {
       "pdo_category": "DO Reguler"
     },
     "position": {
-      "bus_body_no": "BUS-DEMO-01",
+      "bus_body_no": "TJ-123",
       "latitude": -6.18125,
       "longitude": 106.8111,
       "speed": 24,
@@ -150,7 +164,7 @@ window.TRACKING = {
       "is_out_of_route": false
     },
     "snap": {
-      "bus_body_no": "BUS-DEMO-01",
+      "bus_body_no": "TJ-123",
       "latitude": -6.18125,
       "longitude": 106.8111,
       "speed": 24,
@@ -171,7 +185,7 @@ window.TRACKING = {
       "snap_distance": 31.3
     },
     "eta": {
-      "bus_body_no": "BUS-DEMO-01",
+      "bus_body_no": "TJ-123",
       "latitude": -6.18125,
       "longitude": 106.8111,
       "speed": 24,
@@ -196,7 +210,7 @@ window.TRACKING = {
       "last_stopping_point_uid": "STOP-DEMO-B"
     },
     "final": {
-      "bus_body_no": "BUS-DEMO-01",
+      "bus_body_no": "TJ-123",
       "latitude": -6.18125,
       "longitude": 106.8111,
       "speed": 24,
@@ -249,27 +263,26 @@ window.TRACKING = {
   },
   "pipeline": [
     "Enrich + history",
-    "Posisi halte",
+    "Stop position",
     "Out-of-route",
     "HMM snap",
     "ETA",
     "Stopping point",
-    "Posisi meter",
+    "Position meter",
     "Headway",
-    "Simpan state",
+    "Save state",
     "Publish"
   ],
   "scenes": [
     {
       "id": "behind-the-dot",
-      "title": "Tijempolan: Live Tracking Overview",
-      "takeaway": "Perjalanan laporan GPS bus hingga menjadi informasi di dashboard.",
+      "title": "A Glimpse Behind Live Tracking: From Bus to Dashboard",
+      "takeaway": "From Bus to Dashboard",
       "visual": "cover",
       "stages": [],
       "steps": [
         "Ikuti satu bus dan perjalanan datanya."
       ],
-      "analogy": "",
       "terms": [],
       "chapter": 0,
       "kicker": "01 / 18",
@@ -289,7 +302,6 @@ window.TRACKING = {
         "Dashboard menerima representasi posisi bus.",
         "Apa saja yang terjadi di antara keduanya?"
       ],
-      "analogy": "Seperti melihat lokasi kurir: titik di layar berasal dari laporan perangkat yang terus diperbarui.",
       "terms": [],
       "chapter": 0,
       "kicker": "02 / 18",
@@ -298,14 +310,13 @@ window.TRACKING = {
     {
       "id": "live-tracking",
       "title": "Apa itu live tracking?",
-      "takeaway": "Pembaruan posisi berkala yang diberi konteks perjalanan.",
+      "takeaway": "Pembaruan posisi berkala yang diberi context perjalanan.",
       "visual": "overview",
       "stages": "all",
       "steps": [
         "Perangkat melaporkan posisi dan waktu secara berkala.",
-        "Di Transjakarta, laporan diolah menjadi konteks perjalanan dan informasi operasional."
+        "Consumer mengolah dan publish ke broker; dashboard menerima update, sementara downstream services melakukan upsert atau processing."
       ],
-      "analogy": "Seperti rangkaian kabar perjalanan: setiap laporan memberi keadaan pada waktu tertentu.",
       "terms": [
         {
           "term": "live tracking",
@@ -319,7 +330,7 @@ window.TRACKING = {
     },
     {
       "id": "gps-report",
-      "title": "Asal data: perangkat di bus",
+      "title": "Data source: perangkat di bus",
       "takeaway": "OBU / modul GPS mengirim laporan melalui MQTT.",
       "visual": "source",
       "stages": [
@@ -327,10 +338,9 @@ window.TRACKING = {
       ],
       "steps": [
         "Identitas menghubungkan laporan dengan bus yang sama.",
-        "Koordinat, speed, dan bearing menggambarkan observasi perangkat.",
-        "Timestamp menunjukkan kapan observasi dibuat; payload dikirim ke topic sumber."
+        "Coordinate, speed, dan bearing menggambarkan observasi perangkat.",
+        "Timestamp menandai waktu observasi; publish ke emq/gps/<source>/<busBodyNo>."
       ],
-      "analogy": "Seperti kartu pos: ada pengirim, isi kabar, dan waktu penulisan.",
       "terms": [
         {
           "term": "OBU",
@@ -356,8 +366,8 @@ window.TRACKING = {
     },
     {
       "id": "brokers",
-      "title": "Broker MQTT",
-      "takeaway": "Menerima publikasi dan meneruskan ke subscriber yang sesuai.",
+      "title": "MQTT broker",
+      "takeaway": "Menerima publishing dan meneruskan ke subscriber yang sesuai.",
       "visual": "broker",
       "stages": [
         "bus",
@@ -366,10 +376,9 @@ window.TRACKING = {
       ],
       "steps": [
         "OBU / Module GPS memublikasikan laporan ke topic sumber.",
-        "Broker terpusat menerima pesan dan mencocokkan langganan.",
+        "Central broker menerima message dan mencocokkan subscription.",
         "Forwarder menerima pesan melalui koneksi MQTT sebagai subscriber."
       ],
-      "analogy": "Saluran pengumuman: pengirim memilih kanal, pelanggan memilih kanal yang ingin didengar.",
       "terms": [
         {
           "term": "topic",
@@ -388,7 +397,7 @@ window.TRACKING = {
         },
         {
           "term": "subscribe",
-          "def": "Berlangganan pesan sesuai topic atau pola.",
+          "def": "Bersubscription pesan sesuai topic atau pola.",
           "step": 2
         }
       ],
@@ -399,22 +408,21 @@ window.TRACKING = {
     {
       "id": "forwarder",
       "title": "Forwarder dan RabbitMQ",
-      "takeaway": "Seragamkan laporan, lalu bagi pekerjaan ke antrean.",
+      "takeaway": "Seragamkan laporan, lalu bagi pekerjaan ke queue.",
       "visual": "forwarder",
       "stages": [
         "forwarder",
         "rabbitmq"
       ],
       "steps": [
-        "Normalisasi menyeragamkan bentuk dan tipe nilai payload.",
+        "Normalization mengubah tipe field speed, misalnya string \"24\" menjadi number 24.",
         "Forwarder meneruskan pesan ke RabbitMQ melalui AMQP.",
         "Consistent-hash exchange memilih queue berdasarkan busBodyNo.",
         "Bus yang sama mengikuti jalur yang konsisten selama topologi stabil."
       ],
-      "analogy": "Seperti pembagian loket: identitas bus menentukan jalur antrean yang konsisten.",
       "terms": [
         {
-          "term": "normalisasi",
+          "term": "normalization",
           "def": "Menyeragamkan bentuk dan tipe data.",
           "step": 0
         },
@@ -425,7 +433,7 @@ window.TRACKING = {
         },
         {
           "term": "queue",
-          "def": "Antrean pesan yang menunggu diproses.",
+          "def": "Queue pesan yang menunggu diproses.",
           "step": 1
         },
         {
@@ -445,7 +453,7 @@ window.TRACKING = {
     },
     {
       "id": "consumer",
-      "title": "Consumer: banyak bus, kerja terbagi",
+      "title": "Consumer: parallel processing",
       "takeaway": "Pemrosesan paralel tetap membutuhkan urutan per bus.",
       "visual": "consumer",
       "stages": [
@@ -454,11 +462,10 @@ window.TRACKING = {
       ],
       "steps": [
         "Setiap queue memiliki worker pool untuk mengolah pesan.",
-        "Hash identitas bus memilih goroutine di dalam pool.",
+        "Hash body number memilih worker yang konsisten di dalam pool.",
         "Prefetch membatasi pesan belum di-ACK; ACK mengonfirmasi penanganan delivery.",
-        "Setiap laporan melewati rangkaian pengayaan, perhitungan, state, lalu publikasi."
+        "Setiap laporan melewati rangkaian enrichment, perhitungan, state, lalu publishing."
       ],
-      "analogy": "Seperti beberapa petugas: bus berbeda bisa dilayani bersamaan, berkas bus yang sama mengikuti petugas yang sama.",
       "terms": [
         {
           "term": "worker pool",
@@ -466,8 +473,8 @@ window.TRACKING = {
           "step": 0
         },
         {
-          "term": "goroutine",
-          "def": "Unit eksekusi ringan di Go.",
+          "term": "worker",
+          "def": "Pelaksana processing; implementasinya menggunakan goroutine Go.",
           "step": 1
         },
         {
@@ -487,27 +494,26 @@ window.TRACKING = {
     },
     {
       "id": "enrichment",
-      "title": "Enrichment: memberi konteks",
-      "takeaway": "Koordinat memperoleh kendaraan, penugasan, trip, dan halte.",
+      "title": "Enrichment: melengkapi context",
+      "takeaway": "Body number menghubungkan GPS report dengan reference data kendaraan dan trip.",
       "visual": "enrichment",
       "stages": [
         "consumer"
       ],
       "steps": [
         "Mulai dari laporan GPS dan state bus sebelumnya.",
-        "Consumer membaca referensi dan konteks dari Redis.",
-        "Tambahkan penugasan, rute, trip, lintasan, dan urutan halte."
+        "Consumer lookup reference data di Redis berdasarkan body number, sehingga mengurangi database read per report.",
+        "Tambahkan assignment, route, trip, route geometry, dan stop sequence."
       ],
-      "analogy": "Seperti berkas referensi di meja petugas: cepat dibaca tanpa mengambil ulang dari gudang.",
       "terms": [
         {
           "term": "enrichment",
-          "def": "Menambahkan konteks pada data yang sudah diterima.",
+          "def": "Menambahkan context pada data yang sudah diterima.",
           "step": 0
         },
         {
           "term": "Redis / cache",
-          "def": "Penyimpanan cepat untuk referensi dan state yang siap dibaca.",
+          "def": "Storage cepat untuk referensi dan state yang siap dibaca.",
           "step": 1
         }
       ],
@@ -519,28 +525,27 @@ window.TRACKING = {
     },
     {
       "id": "stop-context",
-      "title": "Posisi dan status halte",
+      "title": "Position dan stop status",
       "takeaway": "Kedekatan, urutan, arah, dan state dibaca bersama.",
       "visual": "position",
       "stages": [
         "consumer"
       ],
       "steps": [
-        "GeoRadius mencari kandidat halte di sekitar koordinat raw.",
-        "Jarak, arah, dan urutan perjalanan membantu memilih kandidat.",
+        "GeoRadius mencari kandidat halte di sekitar coordinate raw.",
+        "Jarak, arah, dan trip sequence membantu memilih kandidat.",
         "State membedakan menuju, tiba, dan meninggalkan halte.",
-        "Pemeriksaan out-of-route menilai jarak terhadap lintasan trip."
+        "Pemeriksaan out-of-route menilai jarak terhadap route geometry trip."
       ],
-      "analogy": "Seperti membaca urutan halaman: posisi sekarang lebih masuk akal bila halaman sebelumnya diketahui.",
       "terms": [
         {
           "term": "GeoRadius",
-          "def": "Mencari kandidat di sekitar koordinat dalam radius tertentu.",
+          "def": "Mencari kandidat di sekitar coordinate dalam radius tertentu.",
           "step": 0
         },
         {
           "term": "Haversine",
-          "def": "Menghitung jarak permukaan bumi antara dua koordinat.",
+          "def": "Menghitung jarak permukaan bumi antara dua coordinate.",
           "step": 1
         },
         {
@@ -550,35 +555,34 @@ window.TRACKING = {
         },
         {
           "term": "out-of-route",
-          "def": "Indikasi posisi berjarak dari lintasan trip.",
+          "def": "Indikasi posisi berjarak dari route geometry trip.",
           "step": 3
         }
       ],
       "payload": "position",
-      "substage": "Posisi halte",
+      "substage": "Stop position",
       "chapter": 2,
       "kicker": "09 / 18",
       "badge": "illustration"
     },
     {
       "id": "snapping",
-      "title": "Snapping ke lintasan",
+      "title": "Snapping ke route geometry",
       "takeaway": "Raw adalah observasi; snap adalah estimasi pencocokan.",
       "visual": "snap",
       "stages": [
         "consumer"
       ],
       "steps": [
-        "Koordinat raw dapat bergeser dari lintasan.",
+        "Coordinate raw dapat bergeser dari route geometry.",
         "HMM menilai kandidat lewat jarak, arah, dan kesinambungan.",
         "Jika pencocokan tidak valid, sistem dapat kembali ke raw.",
-        "Marker dan status halte dapat berbeda karena acuan perhitungannya berbeda."
+        "Marker dan stop status dapat berbeda karena acuan perhitungannya berbeda."
       ],
-      "analogy": "Seperti merapikan jejak pensil ke jalur yang cocok sambil melihat arah goresan sebelumnya.",
       "terms": [
         {
           "term": "snapping",
-          "def": "Mencocokkan observasi GPS dengan lintasan yang diketahui.",
+          "def": "Mencocokkan observasi GPS dengan route geometry yang diketahui.",
           "step": 0
         },
         {
@@ -600,19 +604,18 @@ window.TRACKING = {
     },
     {
       "id": "eta",
-      "title": "ETA dan konteks operasional",
-      "takeaway": "Jarak, kecepatan, posisi lintasan, dan hubungan antarbus.",
+      "title": "ETA dan operational context",
+      "takeaway": "Jarak, kecepatan, posisi route geometry, dan hubungan antarbus.",
       "visual": "eta",
       "stages": [
         "consumer"
       ],
       "steps": [
-        "Hitung sisa jarak mengikuti lintasan menuju halte berikutnya.",
+        "Hitung sisa jarak mengikuti route geometry menuju halte berikutnya.",
         "ETA memakai jarak / kecepatan, dengan minimum perhitungan 30 km/jam.",
-        "Stopping point dan posisi meter memberi konteks lokasi pada lintasan.",
+        "Stopping point dan position meter memberi context lokasi pada route geometry.",
         "Headway membaca hubungan antarbus; ETA tetap sebuah perkiraan."
       ],
-      "analogy": "Seperti memperkirakan waktu berjalan: jarak dibagi asumsi kecepatan, dengan kondisi perjalanan yang bisa berubah.",
       "terms": [
         {
           "term": "ETA",
@@ -621,12 +624,12 @@ window.TRACKING = {
         },
         {
           "term": "position meter",
-          "def": "Posisi sepanjang acuan lintasan dalam meter.",
+          "def": "Posisi sepanjang acuan route geometry dalam meter.",
           "step": 2
         },
         {
           "term": "headway",
-          "def": "Jarak waktu atau posisi antarbus dalam konteks layanan.",
+          "def": "Jarak waktu atau posisi antarbus dalam context layanan.",
           "step": 3
         }
       ],
@@ -638,20 +641,19 @@ window.TRACKING = {
     },
     {
       "id": "state-and-publish",
-      "title": "Simpan state, sebarkan hasil",
+      "title": "Update state dan publish",
       "takeaway": "Satu hasil pengolahan mendukung laporan berikutnya dan banyak penerima.",
       "visual": "publish",
       "stages": [
         "consumer",
-        "publish"
+        "output-broker"
       ],
       "steps": [
         "Perbarui history:<bus> di Redis untuk laporan berikutnya.",
-        "Publikasikan generic dan vehicle update sesuai kebutuhan penerima.",
+        "Publishingkan generic dan vehicle update sesuai kebutuhan penerima.",
         "Terbitkan pula GPS history, arrival, dan travel time ketika syaratnya terpenuhi.",
-        "Payload kini memuat observasi, konteks, posisi, snap, dan estimasi."
+        "Payload kini memuat observasi, context, posisi, snap, dan estimasi."
       ],
-      "analogy": "Seperti catatan serah-terima: simpan progres kerja, lalu bagikan informasi kepada penerima yang perlu.",
       "terms": [
         {
           "term": "state Redis",
@@ -673,11 +675,11 @@ window.TRACKING = {
     },
     {
       "id": "dashboard",
-      "title": "Dashboard dan layanan penerima",
+      "title": "Dashboard dan downstream services",
       "takeaway": "Kondisi tersimpan memberi awal; stream membawa pembaruan.",
       "visual": "receivers",
       "stages": [
-        "publish",
+        "output-broker",
         "dashboard"
       ],
       "steps": [
@@ -685,7 +687,6 @@ window.TRACKING = {
         "MQTT memperbarui kendaraan dan headway setelah data awal siap.",
         "Celah halte menggabungkan informasi arrival/generic dengan sensor."
       ],
-      "analogy": "Seperti membuka papan informasi terakhir, lalu menerima kabar terbaru melalui saluran langsung.",
       "terms": [
         {
           "term": "snapshot",
@@ -693,7 +694,7 @@ window.TRACKING = {
           "step": 0
         },
         {
-          "term": "prefetch halaman",
+          "term": "page prefetch",
           "def": "Mengambil data awal agar tampilan segera terisi.",
           "step": 0
         }
@@ -705,27 +706,26 @@ window.TRACKING = {
     },
     {
       "id": "persistence",
-      "title": "Data juga disimpan",
-      "takeaway": "Keadaan terakhir dan riwayat memiliki pola penyimpanan berbeda.",
+      "title": "Data persistence",
+      "takeaway": "Keadaan terakhir dan riwayat memiliki pola storage berbeda.",
       "visual": "storage",
       "stages": [
-        "publish"
+        "output-broker"
       ],
       "steps": [
         "tije-bus-tracking melakukan upsert kondisi terakhir per bus.",
-        "tije-bus-histories menambah rekaman GPS dan arrival.",
+        "tije-bus-historyes menambah record GPS dan arrival.",
         "Travel time antarsegmen juga dipersist untuk analisis perjalanan."
       ],
-      "analogy": "Papan posisi terakhir diperbarui; buku perjalanan mendapat catatan tambahan.",
       "terms": [
         {
           "term": "upsert",
-          "def": "Menambah atau memperbarui rekaman dengan identitas yang sama.",
+          "def": "Menambah atau memperbarui record dengan identitas yang sama.",
           "step": 0
         },
         {
           "term": "insert",
-          "def": "Menambahkan rekaman baru ke penyimpanan.",
+          "def": "Menambahkan record baru ke storage.",
           "step": 1
         }
       ],
@@ -736,27 +736,26 @@ window.TRACKING = {
     },
     {
       "id": "storage-tradeoff",
-      "title": "Histori berguna, storage bertumbuh",
-      "takeaway": "Frekuensi laporan dan masa simpan menentukan banyaknya rekaman.",
+      "title": "Historical data dan storage",
+      "takeaway": "Frekuensi laporan dan masa simpan menentukan banyaknya record.",
       "visual": "tradeoff",
       "stages": [
-        "publish"
+        "output-broker"
       ],
       "steps": [
-        "Setiap sampel atau kejadian historis menambah rekaman.",
+        "Setiap sampel atau kejadian historys menambah record.",
         "Kebutuhan analisis perlu diseimbangkan dengan biaya simpan dan baca.",
-        "Retensi, partisi, dan arsip adalah opsi pengelolaan sesuai kebutuhan."
+        "Retention, partitioning, dan archiving adalah opsi pengelolaan sesuai kebutuhan."
       ],
-      "analogy": "Seperti buku log: makin sering menulis dan makin lama menyimpan, makin banyak halaman.",
       "terms": [
         {
-          "term": "retensi",
+          "term": "retention",
           "def": "Kebijakan berapa lama data disimpan.",
           "step": 2
         },
         {
-          "term": "partisi / arsip",
-          "def": "Pilihan mengelompokkan dan memindahkan data historis.",
+          "term": "partitioning / archiving",
+          "def": "Pilihan mengelompokkan dan memindahkan data historys.",
           "step": 2
         }
       ],
@@ -767,7 +766,7 @@ window.TRACKING = {
     },
     {
       "id": "issues",
-      "title": "Ketika live tracking bermasalah",
+      "title": "Live tracking issues",
       "takeaway": "Baca gejala, telusuri penyebab, lalu pilih mitigasi.",
       "visual": "issues",
       "stages": [
@@ -778,9 +777,8 @@ window.TRACKING = {
       "steps": [
         "Queue menumpuk: bandingkan laju masuk dengan kemampuan proses.",
         "Data terlambat atau terputus: periksa timestamp, koneksi, dan aliran pesan.",
-        "Marker berbeda dari status halte: periksa raw/snap, referensi, dan state."
+        "Marker berbeda dari stop status: periksa raw/snap, referensi, dan state."
       ],
-      "analogy": "Antrean panjang menunjukkan ada ketidakseimbangan; memperbesar ruang tunggu tidak mempercepat proses.",
       "terms": [
         {
           "term": "backlog",
@@ -799,16 +797,15 @@ window.TRACKING = {
     },
     {
       "id": "recap",
-      "title": "Satu laporan, banyak informasi",
-      "takeaway": "Setiap tahap mengubah laporan sederhana menjadi konteks yang berguna.",
+      "title": "Satu report, banyak informasi",
+      "takeaway": "Setiap tahap mengubah laporan sederhana menjadi context yang berguna.",
       "visual": "recap",
       "stages": "all",
       "steps": [
-        "Bus mengirim identitas, koordinat, dan waktu.",
-        "Worker menambahkan konteks, menghitung, serta mengingat state.",
+        "Bus mengirim identitas, coordinate, dan waktu.",
+        "Worker menambahkan context, menghitung, serta mengingat state.",
         "Hasilnya menggerakkan dashboard, layanan operasional, dan riwayat."
       ],
-      "analogy": "",
       "terms": [],
       "recapStep": 2,
       "chapter": 5,
@@ -818,17 +815,19 @@ window.TRACKING = {
     {
       "id": "qa",
       "title": "Q&A",
-      "takeaway": "Mari lanjutkan percakapannya.",
+      "takeaway": "Questions & discussion.",
       "visual": "qa",
       "stages": [],
       "steps": [
         "Pertanyaan?"
       ],
-      "analogy": "",
       "terms": [],
       "chapter": 5,
       "kicker": "18 / 18",
       "badge": "illustration"
     }
-  ]
+  ],
+  "sourceTopic": "emq/gps/<source>/<busBodyNo>",
+  "sourceTopicExample": "emq/gps/OBU/TJ-123",
+  "sourceSubscription": "emq/gps/#"
 };

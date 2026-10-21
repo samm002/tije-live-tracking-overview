@@ -1,4 +1,4 @@
-# Tijempolan: Live Tracking Overview
+# A Glimpse Behind Live Tracking: From Bus to Dashboard
 
 Versi 3 — presentasi berbahasa Indonesia tentang perjalanan laporan GPS bus menjadi informasi dashboard. 18 slide dengan 55 langkah; alokasi narasi 23:15 di luar Q&A. Angka waktu merupakan target latihan, belum pengukuran penyampaian manusia.
 
@@ -46,3 +46,5 @@ node --check src/navigation.js
 Pengujian utama tidak memerlukan dokumen di luar repository. Pemeriksaan durasi/storyboard dan browser dilakukan terpisah dan dicatat di `../validation.md`.
 
 Pengerjaan mengikuti skill Sites dengan preview lokal. Revisi ini tidak melakukan deployment atau push. Identitas hosting lama pada arsip merupakan catatan historis.
+
+Analogi hanya tersedia pada catatan pembicara. Placeholder foto bus dan screenshot dashboard pada slide 2 dapat diganti dengan menaruh file sesuai ASSETS.md.
