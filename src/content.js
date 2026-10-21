@@ -17,7 +17,7 @@ window.TRACKING = {
     },
     {
       "id": "broker",
-      "label": "Broker"
+      "label": "Source broker"
     },
     {
       "id": "forwarder",
@@ -33,7 +33,7 @@ window.TRACKING = {
     },
     {
       "id": "output-broker",
-      "label": "Broker"
+      "label": "Destination broker"
     },
     {
       "id": "dashboard",
@@ -68,7 +68,7 @@ window.TRACKING = {
   },
   "demo": {
     "bus": "TJ-123",
-    "trip": "TRIP-DEMO-ABC",
+    "trip": "10-R01",
     "raw": {
       "latitude": -6.18125,
       "longitude": 106.8111
@@ -140,10 +140,11 @@ window.TRACKING = {
       "bearing": 135,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
-      "route_code": "R-DEMO",
-      "trip_id": "TRIP-DEMO-ABC",
-      "bus_status": "on",
-      "pdo_category": "DO Reguler"
+      "route_code": "10",
+      "trip_id": "10-R01",
+      "driver_name": "Driver Demo",
+      "do_number": "DO-DEMO-001",
+      "do_category": "DO Reguler"
     },
     "position": {
       "bus_body_no": "TJ-123",
@@ -153,10 +154,11 @@ window.TRACKING = {
       "bearing": 135,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
-      "route_code": "R-DEMO",
-      "trip_id": "TRIP-DEMO-ABC",
-      "bus_status": "on",
-      "pdo_category": "DO Reguler",
+      "route_code": "10",
+      "trip_id": "10-R01",
+      "driver_name": "Driver Demo",
+      "do_number": "DO-DEMO-001",
+      "do_category": "DO Reguler",
       "prev_stops": "B",
       "curr_stops": "",
       "next_stops": "C",
@@ -171,10 +173,11 @@ window.TRACKING = {
       "bearing": 135,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
-      "route_code": "R-DEMO",
-      "trip_id": "TRIP-DEMO-ABC",
-      "bus_status": "on",
-      "pdo_category": "DO Reguler",
+      "route_code": "10",
+      "trip_id": "10-R01",
+      "driver_name": "Driver Demo",
+      "do_number": "DO-DEMO-001",
+      "do_category": "DO Reguler",
       "prev_stops": "B",
       "curr_stops": "",
       "next_stops": "C",
@@ -192,10 +195,11 @@ window.TRACKING = {
       "bearing": 135,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
-      "route_code": "R-DEMO",
-      "trip_id": "TRIP-DEMO-ABC",
-      "bus_status": "on",
-      "pdo_category": "DO Reguler",
+      "route_code": "10",
+      "trip_id": "10-R01",
+      "driver_name": "Driver Demo",
+      "do_number": "DO-DEMO-001",
+      "do_category": "DO Reguler",
       "prev_stops": "B",
       "curr_stops": "",
       "next_stops": "C",
@@ -217,10 +221,11 @@ window.TRACKING = {
       "bearing": 135,
       "source": "OBU",
       "deviceTimestamp": 1792551600000,
-      "route_code": "R-DEMO",
-      "trip_id": "TRIP-DEMO-ABC",
-      "bus_status": "on",
-      "pdo_category": "DO Reguler",
+      "route_code": "10",
+      "trip_id": "10-R01",
+      "driver_name": "Driver Demo",
+      "do_number": "DO-DEMO-001",
+      "do_category": "DO Reguler",
       "prev_stops": "B",
       "curr_stops": "",
       "next_stops": "C",
@@ -239,8 +244,9 @@ window.TRACKING = {
     "context": [
       "route_code",
       "trip_id",
-      "bus_status",
-      "pdo_category"
+      "driver_name",
+      "do_number",
+      "do_category"
     ],
     "position": [
       "prev_stops",
@@ -265,12 +271,12 @@ window.TRACKING = {
     "Enrich + history",
     "Stop position",
     "Out-of-route",
-    "HMM snap",
+    "Snap",
     "ETA",
     "Stopping point",
     "Position meter",
     "Headway",
-    "Save state",
+    "Save history cache",
     "Publish"
   ],
   "scenes": [
@@ -315,7 +321,7 @@ window.TRACKING = {
       "stages": "all",
       "steps": [
         "Perangkat melaporkan posisi dan waktu secara berkala.",
-        "Consumer mengolah dan publish ke broker; dashboard menerima update, sementara downstream services melakukan upsert atau processing."
+        "Consumer mengolah dan publish ke destination broker; dashboard menerima update, sementara downstream services melakukan persist / process."
       ],
       "terms": [
         {
@@ -375,8 +381,8 @@ window.TRACKING = {
         "forwarder"
       ],
       "steps": [
-        "OBU / Module GPS memublikasikan laporan ke topic sumber.",
-        "Central broker menerima message dan mencocokkan subscription.",
+        "OBU / GPS Module memublikasikan laporan ke topic sumber.",
+        "Source broker menerima message dan mencocokkan subscription.",
         "Forwarder menerima pesan melalui koneksi MQTT sebagai subscriber."
       ],
       "terms": [
@@ -416,7 +422,7 @@ window.TRACKING = {
       ],
       "steps": [
         "Normalization mengubah tipe field speed, misalnya string \"24\" menjadi number 24.",
-        "Forwarder meneruskan pesan ke RabbitMQ melalui AMQP.",
+        "Forwarder publish ke exchange di dalam RabbitMQ melalui AMQP.",
         "Consistent-hash exchange memilih queue berdasarkan busBodyNo.",
         "Bus yang sama mengikuti jalur yang konsisten selama topologi stabil."
       ],
@@ -464,7 +470,7 @@ window.TRACKING = {
         "Setiap queue memiliki worker pool untuk mengolah pesan.",
         "Hash body number memilih worker yang konsisten di dalam pool.",
         "Prefetch membatasi pesan belum di-ACK; ACK mengonfirmasi penanganan delivery.",
-        "Setiap laporan melewati rangkaian enrichment, perhitungan, state, lalu publishing."
+        "Setiap laporan melewati enrichment, perhitungan, penyimpanan history cache di Redis, lalu publishing."
       ],
       "terms": [
         {
@@ -613,7 +619,7 @@ window.TRACKING = {
       "steps": [
         "Hitung sisa jarak mengikuti route geometry menuju halte berikutnya.",
         "ETA memakai jarak / kecepatan, dengan minimum perhitungan 30 km/jam.",
-        "Stopping point dan position meter memberi context lokasi pada route geometry.",
+        "Last stopping point UID adalah acuan posisi terakhir; position meter menghitung jarak pada route geometry.",
         "Headway membaca hubungan antarbus; ETA tetap sebuah perkiraan."
       ],
       "terms": [

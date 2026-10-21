@@ -26,7 +26,7 @@ URL menyimpan ID slide, misalnya `#stop-context`; membuka URL memulai dari langk
 - `src/navigation.js`: aturan perpindahan langkah dan URL.
 - `src/assets/OBU.png`: foto perangkat dari pengguna, ditampilkan pada slide sumber data.
 
-Payload dipakai sebagai ringkasan pedagogis field pilihan, bukan kontrak integrasi. Perhatikan bahwa source dan keluaran dapat memakai bentuk field berbeda. Raw dan snap tetap dipisahkan. Contoh ETA memakai 1.000 m dan kecepatan hitung minimum 30 km/jam sehingga 120 detik = dua menit.
+Payload dipakai sebagai ringkasan pedagogis field pilihan, bukan kontrak integrasi. Perhatikan bahwa source dan keluaran dapat memakai bentuk field berbeda. Raw dan snap tetap dipisahkan. Panel context dan publish memakai enam field pilihan yang sama; catatan publish menyebut hasil processing lainnya. Nama do_number/do_category adalah label presentasi untuk no_do/pdo_category pada DTO checkout. Driver Demo, DO-DEMO-001, route 10 / trip 10-R01 dan skema A–B–C adalah contoh ilustratif, bukan data operasional. Contoh ETA memakai 1.000 m dan kecepatan hitung minimum 30 km/jam sehingga 120 detik = dua menit.
 
 ## Dokumen pendamping dan arsip
 

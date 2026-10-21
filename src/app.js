@@ -8,15 +8,19 @@
   let state=N.parse(location.hash,D.scenes),idleHandle;
   const text=(x,y,v,cls='svg-text',anchor='start')=>`<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${esc(v)}</text>`;
   function wrap(x,y,value,cls,limit,leading=29) {
-    const rows=[];let line='';
-    for(const word of String(value).split(' ')) {
-      if(line&&(line+' '+word).length>limit){rows.push(line);line=word;}
-      else line+=(line?' ':'')+word;
+    const rows=[];
+    for(const paragraph of String(value).split('\n')) {
+      let line='';
+      for(const word of paragraph.split(' ')) {
+        if(line&&(line+' '+word).length>limit){rows.push(line);line=word;}
+        else line+=(line?' ':'')+word;
+      }
+      rows.push(line);
     }
-    rows.push(line);return rows.map((r,i)=>text(x,y+i*leading,r,cls)).join('');
+    return rows.map((r,i)=>text(x,y+i*leading,r,cls)).join('');
   }
-  function box(x,y,w,h,title,sub='',color='blue',titleClass='svg-node-title',titleLimit) {
-    return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="white" stroke="${colors[color]}" stroke-width="2"/><path d="M${x} ${y+15}v${h-30}" stroke="${colors[color]}" stroke-width="5"/>`+wrap(x+18,y+34,title,titleClass,titleLimit||Math.floor((w-35)/12))+(sub?wrap(x+18,y+h-30,sub,'svg-small',Math.floor((w-35)/10),24):'')+'</g>';
+  function box(x,y,w,h,title,sub='',color='blue',titleClass='svg-node-title',titleLimit,subClass='svg-small',subLimit) {
+    return `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="white" stroke="${colors[color]}" stroke-width="2"/><path d="M${x} ${y+15}v${h-30}" stroke="${colors[color]}" stroke-width="5"/>`+wrap(x+18,y+34,title,titleClass,titleLimit||Math.floor((w-35)/12))+(sub?wrap(x+18,y+h-30,sub,subClass,subLimit||Math.floor((w-35)/10),24):'')+'</g>';
   }
   const arrow=(x1,y1,x2,y2,color='blue',dashed=false)=>`<path d="M${x1} ${y1}L${x2} ${y2}" fill="none" stroke="${colors[color]}" stroke-width="2.5" ${dashed?'stroke-dasharray="7 5"':''} marker-end="url(#arrow-${color})"/>`;
   const group=(on,html)=>`<g class="${on?'reveal-on':'reveal-dim'}">${html}</g>`;
@@ -41,26 +45,29 @@
       case 'overview':
         D.stages.forEach((stage,i)=>{
           const x=i<4?20+i*250:270+(i-4)*250,y=i<4?45:200;
-          const sub=i===4?'Process + publish':i===5?'MQTT':'';
-          s+=group(i<4||on(1),box(x,y,210,100,stage.label,sub,i===4?'purple':'blue'));
+          const sub=['Publish Message','Broadcast Message','Normalize + Publish','','Process + publish','',''][i];
+          s+=group(i<4||on(1),box(x,y,210,100,stage.label,sub,i===4?'purple':'blue','svg-overview-title',15,'svg-overview-detail',23));
           if(i!==3&&i!==6)s+=group(i<3||on(1),arrow(x+210,y+50,x+243,y+50));
         });
         s+=group(on(1),'<path data-connection="queue-consumer" d="M875 150V175H375V195" fill="none" stroke="'+colors.blue+'" stroke-width="2.5" marker-end="url(#arrow-blue)"/>'+
-          arrow(625,305,625,345,'gray',true)+box(450,350,370,100,'Downstream services','Upsert / processing','gray')+
-          text(35,405,'Dashed: downstream processing','svg-small'));
+          arrow(625,305,625,345,'gray',true)+box(450,350,370,100,'Downstream services','Persist / Process','gray'));
         break;
       case 'broker':
-        s=box(25,135,255,150,'OBU / Module GPS','Publish','gray')+group(on(1),arrow(285,205,365,205)+box(370,135,255,150,'Central broker','Topic → subscription'))+group(on(2),arrow(630,205,710,205)+box(715,135,255,150,'Forwarder','Subscriber'));
+        s=box(25,135,255,150,'OBU /\nGPS Module','Publish','gray')+group(on(1),arrow(285,205,365,205)+box(370,135,255,150,'Source broker','Topic → subscription'))+group(on(2),arrow(630,205,710,205)+box(715,135,255,150,'Forwarder','Subscriber'));
         s+=text(325,175,'MQTT','svg-mono','middle')+text(670,175,'MQTT','svg-mono','middle')+text(500,355,'Publish topic: emq/gps/<source>/<busBodyNo>','svg-code','middle');break;
       case 'forwarder':
-        s=box(20,55,265,120,'Normalization','speed: "24" → 24')+group(on(1),arrow(290,115,365,115)+box(370,55,265,120,'RabbitMQ','AMQP → exchange'))+group(on(2),arrow(640,115,725,115)+box(730,55,245,120,'Consistent hash','key: busBodyNo','purple'));
-        ['Queue A','Queue B','Queue C'].forEach((label,i)=>s+=group(on(2),box(120+i*300,290,225,105,label,i===1?D.demo.bus:'Other buses',i===1?'blue':'gray')));
-        s+=group(on(2),arrow(530,240,232,240,'gray',true)+arrow(232,240,232,285,'gray',true)+arrow(832,240,832,285,'gray',true)+arrow(850,180,850,240,'purple')+arrow(850,240,530,240,'purple')+arrow(530,240,530,285,'purple'))+group(on(3),text(500,435,'Configured queues; the same bus follows a consistent route.','svg-small','middle'));break;
+        s=group(on(1),'<g data-component="rabbitmq"><rect x="330" y="25" width="650" height="385" rx="14" fill="#f7f5fc" stroke="'+colors.purple+'" stroke-width="2"/>'+text(350,65,'RabbitMQ','svg-node-title')+
+          box(360,115,585,105,'Exchange','','purple')+group(on(2),text(378,190,'type: x-consistent-hash · key: busBodyNo','svg-small'))+
+          group(on(2),'<path d="M655 225V265H445V305" fill="none" stroke="'+colors.gray+'" stroke-width="2.5" marker-end="url(#arrow-gray)"/>'+arrow(655,225,655,305,'purple')+
+          '<path d="M655 265H865V305" fill="none" stroke="'+colors.gray+'" stroke-width="2.5" marker-end="url(#arrow-gray)"/>'+
+          ['Queue A','Queue B','Queue C'].map((label,i)=>box(350+i*210,310,190,90,label,['TJ-201, TJ-202, …','TJ-123, TJ-124, …','TJ-364, TJ-365'][i],i===1?'blue':'gray','svg-node-title',15,'svg-queue-buses',21)).join(''))+'</g>')+
+          box(20,155,250,130,'Normalization','speed: "24" → 24')+group(on(1),arrow(275,220,350,170)+text(285,165,'AMQP','svg-mono'));
+        s+=group(on(3),text(500,445,'Configured queues; the same bus follows a consistent route.','svg-small','middle'));break;
       case 'consumer':
         if(step===3){s=pipeline();break;}
-        s=box(25,145,220,120,'Queue','Multi-bus reports')+arrow(250,205,355,205)+box(360,145,240,120,'Hash bus → worker','FNV(bus) % poolSize','purple');
+        s=box(25,145,220,120,'Queue','Multi-bus reports')+arrow(250,205,355,205)+box(360,145,280,120,'Hash bus → worker','FNV(bus) % poolSize','purple');
         for(let i=0;i<4;i++)s+=box(740,20+i*102,220,88,'Worker '+(i+1),'',i===1?'purple':'gray');
-        s+=group(on(1),arrow(605,205,730,165,'purple')+text(500,80,'TJ-123 → same worker','svg-node-title','middle'))+group(on(2),text(30,340,'Prefetch 4 · unacknowledged deliveries','svg-node-title')+text(30,378,'ACK confirms delivery handling.','svg-small'))+text(30,435,'Checkout config: 100 queue × 4 = 400 slot / instance.','svg-small');break;
+        s+=group(on(1),arrow(645,205,730,165,'purple')+text(500,80,'TJ-123 → same worker','svg-node-title','middle'))+group(on(2),text(30,340,'Prefetch 4 · unacknowledged deliveries','svg-node-title')+text(30,378,'ACK confirms delivery handling.','svg-small'))+text(30,435,'Checkout config: 100 queue × 4 = 400 slot / instance.','svg-small');break;
       case 'enrichment':
         s=box(15,165,210,130,'GPS report + state','TJ-123')+group(on(1),box(265,20,245,100,'Cron API','Reference by body number','purple')+arrow(385,125,385,160,'purple')+box(265,165,245,130,'Redis','Reference cache','purple')+arrow(230,230,260,230,'purple'))+group(on(2),arrow(515,230,555,230,'teal')+box(560,165,125,130,'Trip','A–B–C','teal'))+text(345,375,'Redis lookup by body number; fewer database reads.','svg-small','middle');break;
       case 'position':
@@ -80,7 +87,7 @@
         ['syntra/generic/<bus>','/vehicle-update/…/<bus>','syntra/gps_history/','syntra/arrival_history/'].forEach((topic,i)=>s+=group(on(i<2?1:2),text(30,205+i*52,topic,'svg-code')));
         s+=group(on(3),text(350,430,'Some outputs are conditional events.','svg-small','middle'));break;
       case 'receivers':
-        s=box(20,55,240,115,'API / database','Initial snapshot','gray')+arrow(265,112,355,112,'gray')+box(360,55,255,115,'Dashboard','Live track + headway')+group(on(1),box(20,265,240,115,'MQTT','Vehicle update')+arrow(265,320,355,145)+text(415,225,'Vehicle updates','svg-small'))+group(on(2),box(700,55,275,145,'Bus–platform gap','Arrival + generic + sensor','teal')+text(700,285,'Other consumers: PIS / CC','svg-small')+text(700,320,'Topic mapping unverified.','svg-small'))+text(500,430,'Page prefetch: initial snapshot, followed by live updates.','svg-small','middle');break;
+        s=box(20,55,240,115,'API / database','Initial snapshot','gray')+arrow(265,112,355,112,'gray')+box(360,55,255,115,'Dashboard','Live track + headway')+group(on(1),box(20,265,240,115,'MQTT','Vehicle update')+arrow(265,320,355,145)+text(415,225,'Vehicle updates','svg-small'))+group(on(2),box(700,55,275,145,'Bus stop gap','Arrival + generic + sensor','teal')+text(700,285,'Other consumers: PIS / CC','svg-small')+text(700,320,'Topic mapping unverified.','svg-small'))+text(500,430,'Page prefetch: initial snapshot, followed by live updates.','svg-small','middle');break;
       case 'storage':
         s=box(20,65,420,115,'tije-bus-tracking','Latest GPS + enriched tracking','teal')+text(40,235,'UPSERT per bus','svg-big')+text(40,290,'bus_locations · bus_trackings','svg-code')+group(on(1),box(535,65,440,115,'tije-bus-histories','Historical records','gray')+text(555,235,'INSERT new records','svg-node-title')+text(555,290,'gps_histories · arrival_histories','svg-code'))+group(on(2),text(555,350,'travel_time_segment','svg-code')+text(500,420,'Redis state, snapshot database, histori, dan model browser punya tujuan berbeda.','svg-small','middle'));break;
       case 'tradeoff':
@@ -140,7 +147,7 @@
     else if(stage==='position')fields=['bus_body_no',...D.additions.position];
     else if(stage==='snap')fields=['bus_body_no','latitude','longitude',...D.additions.snap];
     else if(stage==='eta')fields=['bus_body_no',...D.additions.eta];
-    else fields=['bus_body_no','trip_id','position_type','snap_latitude','estimated_time_next_stops'];
+    else fields=['bus_body_no',...D.additions.context];
     const additions=D.additions[stage]||[];
     const rows=fields.map(key=>{
       let value=snapshot[key];
@@ -149,7 +156,8 @@
       if(alternative)value=null;
       return `<div class="payload-row${additions.includes(key)&&!alternative?' is-new':''}${stage==='raw'&&!visible?' is-pending':''}"><dt>${esc(key)}</dt><dd>${esc(JSON.stringify(value))}</dd></div>`;
     }).join('');
-    return `<aside class="payload-panel" aria-label="Selected payload fields: ${esc(stage)}"><p class="payload-label">Payload · ${esc(D.demo.bus)}</p><dl>${rows}</dl><p class="payload-caption">${stage==='snap'&&step===2?'Fallback scenario · no snapped coordinates':stage==='eta'?'ETA 120 s = 2 min · selected fields':'Selected fields · additions highlighted'}</p></aside>`;
+    const caption=stage==='snap'&&step===2?'Fallback scenario · no snapped coordinates':stage==='eta'?'ETA 120 s = 2 min · UID: acuan posisi terakhir; arrival adalah event terpisah.':stage==='final'?'Field sama dengan halaman 8; output juga memuat position, snap, ETA, dan headway.':'Selected fields · additions highlighted';
+    return `<aside class="payload-panel${['context','final'].includes(stage)?' payload-context':''}" aria-label="Selected payload fields: ${esc(stage)}"><p class="payload-label">Payload · ${esc(D.demo.bus)}</p><dl>${rows}</dl><p class="payload-caption">${esc(caption)}</p></aside>`;
   }
   function minimap(scene,step) {
     if(['cover','qa'].includes(scene.visual))return '';

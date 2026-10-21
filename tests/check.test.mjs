@@ -28,8 +28,8 @@ test('18 slide, cover/Q&A satu langkah, dan konten layar terpisah dari bahan pem
 
 test('alur memuat proses pendukung dan batas protokol yang diminta',()=>{
   assert.deepEqual(plain(D.stages.map(s=>s.id)),['bus','broker','forwarder','rabbitmq','consumer','output-broker','dashboard']);
-  assert.deepEqual(plain(D.stages.map(s=>s.label)),['Bus','Broker','Forwarder','Queue','Consumer','Broker','Dashboard']);
-  assert.deepEqual(plain(D.pipeline),['Enrich + history','Stop position','Out-of-route','HMM snap','ETA','Stopping point','Position meter','Headway','Save state','Publish']);
+  assert.deepEqual(plain(D.stages.map(s=>s.label)),['Bus','Source broker','Forwarder','Queue','Consumer','Destination broker','Dashboard']);
+  assert.deepEqual(plain(D.pipeline),['Enrich + history','Stop position','Out-of-route','Snap','ETA','Stopping point','Position meter','Headway','Save history cache','Publish']);
   const forwarder=D.scenes.find(s=>s.id==='forwarder');
   assert.match(forwarder.steps.join(' '),/AMQP/);assert.match(forwarder.steps.join(' '),/Consistent-hash/);
   assert.ok(D.scenes.find(s=>s.id==='enrichment').payload);
