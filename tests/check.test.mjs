@@ -11,9 +11,9 @@ vm.runInContext(script('content.js'),context);vm.runInContext(script('navigation
 const {TRACKING:D,TrackingNavigation:N}=context.window;
 const plain=v=>JSON.parse(JSON.stringify(v));
 
-test('18 slide, cover/Q&A satu langkah, dan konten layar terpisah dari bahan pembicara',()=>{
-  assert.equal(D.version,3);assert.equal(D.scenes.length,18);assert.equal(D.chapters.length,6);
-  assert.equal(new Set(D.scenes.map(s=>s.id)).size,18);
+test('20 slide, cover/Q&A satu langkah, dan konten layar terpisah dari bahan pembicara',()=>{
+  assert.equal(D.version,3);assert.equal(D.scenes.length,20);assert.equal(D.chapters.length,6);
+  assert.equal(new Set(D.scenes.map(s=>s.id)).size,20);
   assert.equal(D.scenes[0].visual,'cover');assert.equal(D.scenes.at(-1).visual,'qa');
   assert.equal(D.scenes[0].steps.length,1);assert.equal(D.scenes.at(-1).steps.length,1);
   assert.equal(D.scenes[0].title,D.title);
@@ -29,18 +29,18 @@ test('18 slide, cover/Q&A satu langkah, dan konten layar terpisah dari bahan pem
 test('alur memuat proses pendukung dan batas protokol yang diminta',()=>{
   assert.deepEqual(plain(D.stages.map(s=>s.id)),['bus','broker','forwarder','rabbitmq','consumer','output-broker','dashboard']);
   assert.deepEqual(plain(D.stages.map(s=>s.label)),['Bus','Source broker','Forwarder','Queue','Consumer','Destination broker','Dashboard']);
-  assert.deepEqual(plain(D.pipeline),['Enrich + history','Stop position','Out-of-route','Snap','ETA','Stopping point','Position meter','Headway','Update History Cache','Publish']);
+  assert.deepEqual(plain(D.pipeline),['Enrich + history','Stop position','Snap','ETA','Position meter','Headway','Update History Cache','Publish']);
   const forwarder=D.scenes.find(s=>s.id==='forwarder');
   assert.match(forwarder.steps.join(' '),/AMQP/);assert.match(forwarder.steps.join(' '),/Consistent-hash/);
   assert.ok(D.scenes.find(s=>s.id==='enrichment').payload);
-  assert.match(D.scenes.find(s=>s.id==='dashboard').steps.at(-1),/arrival\/generic.*sensor/);
+  assert.match(D.scenes.find(s=>s.id==='operational-monitoring').steps[0],/kedatangan.*sensor/);
 });
 
-test('definisi engineering muncul pada langkah valid dan membedakan kedua prefetch',()=>{
+test('definisi muncul pada langkah valid dan istilah teknis yang masih dipakai tetap dijelaskan',()=>{
   const all=D.scenes.flatMap(scene=>(scene.terms||[]).map(t=>({...t,scene})));
   for(const t of all){assert.ok(t.def);assert.ok(t.step>=0&&t.step<t.scene.steps.length,t.term);}
   assert.equal(new Set(all.map(t=>t.term)).size,all.length);
-  for(const concept of ['MQTT','AMQP','queue','exchange','consistent hashing','worker pool','worker','ACK','Redis / cache','GeoRadius','Haversine','HMM','ETA','prefetch RabbitMQ','page prefetch'])assert.ok(all.some(t=>t.term===concept),concept);
+  for(const concept of ['MQTT','AMQP','queue','exchange','consistent hashing','consumer','worker','Redis / cache','GeoRadius','Haversine','HMM','ETA','PIS'])assert.ok(all.some(t=>t.term===concept),concept);
 });
 
 test('payload berkembang tanpa menimpa raw dan contoh ETA konsisten dengan kecepatan minimum',()=>{
@@ -61,7 +61,7 @@ test('payload berkembang tanpa menimpa raw dan contoh ETA konsisten dengan kecep
 test('navigasi melewati seluruh langkah dengan invers dan batas yang benar',()=>{
   let state={index:0,step:0},count=1;
   assert.deepEqual(plain(N.previous(state,D.scenes)),state);
-  while(state.index!==17||state.step!==D.scenes[17].steps.length-1){
+  while(state.index!==D.scenes.length-1||state.step!==D.scenes.at(-1).steps.length-1){
     const next=N.next(state,D.scenes);assert.deepEqual(plain(N.previous(next,D.scenes)),plain(state));state=next;assert.ok(++count<200);
   }
   assert.equal(count,D.scenes.reduce((n,s)=>n+s.steps.length,0));
@@ -81,7 +81,7 @@ test('aset wajib tersedia; slot foto opsional mendukung placeholder',()=>{
   assert.equal(D.assets.dashboardPhoto.file,'assets/dashboard-live-tracking.png');
   for(const scene of D.scenes)if(scene.aside)assert.ok(D.assets[scene.aside]);
   const html=script('index.html');
-  for(const m of html.matchAll(/(?:src|href)="([^"#]+)"/g))if(!m[1].startsWith('http'))assert.ok(existsSync(path.join(root,'src',m[1])),m[1]);
+  for(const m of html.matchAll(/(?:src|href)="([^"#]+)"/g))if(!m[1].startsWith('http'))assert.ok(existsSync(path.join(root,'src',m[1].split('?')[0])),m[1]);
 });
 
 test('renderer dapat menampilkan seluruh langkah, termasuk field dan penutup',()=>{
@@ -102,8 +102,8 @@ test('renderer dapat menampilkan seluruh langkah, termasuk field dan penutup',()
       if(scene.payload)assert.ok(html.includes('payload-panel'),scene.id);
       if(scene.visual==='hook')assert.ok(html.includes('photo-placeholder'),scene.id);
       if(scene.visual==='overview'){
-        assert.ok(html.includes('Process + publish'));
-        assert.ok(html.includes('Downstream services'));
+        assert.ok(html.includes('Olah dan bagikan'));
+        assert.ok(html.includes('Layanan lain'));
         assert.equal((html.match(/data-connection="queue-consumer"/g)||[]).length,1);
         const connector=html.match(/<path data-connection="queue-consumer"[^>]+>/)[0];
         assert.equal((connector.match(/marker-end=/g)||[]).length,1);

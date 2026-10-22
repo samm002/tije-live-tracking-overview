@@ -39,3 +39,12 @@ Gunakan path dan nama persis di atas, kemudian reload halaman. Keduanya ditampil
 - Sumber: Screenshot From 2026-10-20 16-40-58.png, diberikan pengguna pada review ini.
 - Disalin tanpa mengedit piksel; ditampilkan sebagai background dekoratif cover dengan object-fit cover dan opacity 12%. Judul memakai biru sebelum titik dua dan ink setelahnya.
 - Tidak dipakai sebagai pengganti placeholder hook. Screenshot adalah ilustrasi tampilan yang disediakan pengguna, bukan verifikasi deployment aktif.
+
+## Screenshot pemantauan operasional
+
+Slide 15 memakai dua screenshot dashboard yang disediakan pengguna:
+
+- src/assets/celah-halte.png: dashboard celah bus–halte.
+- src/assets/headway-monitoring.png: dashboard headway monitoring.
+
+Gambar ditampilkan dengan object-fit contain tanpa pemotongan dan tanpa mengedit piksel sumber. Satu screenshot tampil per langkah agar terbaca. Placeholder tetap menjadi fallback bila file gagal dimuat. Titik bus pada slide 14 adalah diagram ilustratif dengan identitas yang sama seperti JSON. Screenshot dashboard merupakan contoh tampilan yang diberikan pengguna, bukan verifikasi kondisi sistem saat ini.

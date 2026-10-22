@@ -33,10 +33,14 @@
     return `<path d="M55 250H200L300 160H440L540 250H${end}" class="route-base"/><path d="M55 250H200L300 160H440L540 250H${end}" class="route-line"/>`+[[55,250,'A'],[350,160,'B'],[end,250,'C']].map(([x,y,t])=>`<circle cx="${x}" cy="${y}" r="11" fill="white" stroke="${colors.blue}" stroke-width="3"/>`+text(x,y+43,t,'svg-node-title','middle')).join('');
   }
   function pipeline() {
+    const columns=4,width=215,height=120;
+    const position=i=>({x:25+(Math.floor(i/columns)%2?columns-1-i%columns:i%columns)*245,y:75+Math.floor(i/columns)*190});
     return D.pipeline.map((label,i)=>{
-      const x=15+(i<5?i:9-i)*198,y=75+Math.floor(i/5)*190;
-      return box(x,y,180,120,`${i+1}. ${label}`,'',i===9?'blue':'purple','svg-pipeline-title',15)+(i<4?arrow(x+180,y+60,x+195,y+60,'purple'):i>=5&&i<9?arrow(x,y+60,x-15,y+60,'purple'):'');
-    }).join('')+arrow(895,200,895,250,'purple')+text(500,32,'1 GPS Point Journey','svg-mono','middle');
+      const {x,y}=position(i),next=i<D.pipeline.length-1?position(i+1):null;
+      let connector='';
+      if(next)connector=next.y!==y?arrow(x+width/2,y+height,next.x+width/2,next.y-5,'purple'):next.x>x?arrow(x+width,y+height/2,next.x-5,y+height/2,'purple'):arrow(x,y+height/2,next.x+width+5,y+height/2,'purple');
+      return box(x,y,width,height,`${i+1}. ${label}`,'',i===D.pipeline.length-1?'blue':'purple','svg-pipeline-title',17)+connector;
+    }).join('')+text(500,32,'1 GPS Point Journey','svg-mono','middle');
   }
   function visual(scene,step) {
     const on=n=>step>=n,compact=Boolean(scene.payload&&scene.payload!=='raw'),w=compact?700:1000;
@@ -45,12 +49,12 @@
       case 'overview':
         D.stages.forEach((stage,i)=>{
           const x=i<4?20+i*250:270+(i-4)*250,y=i<4?45:200;
-          const sub=['Publish Message','Broadcast Message','Normalize + Publish','','Process + publish','',''][i];
+          const sub=['Kirim laporan','Teruskan pesan','Seragamkan laporan','','Olah dan bagikan','',''][i];
           s+=group(i<4||on(1),box(x,y,210,100,stage.label,sub,i===4?'purple':'blue','svg-overview-title',15,'svg-overview-detail',23));
           if(i!==3&&i!==6)s+=group(i<3||on(1),arrow(x+210,y+50,x+243,y+50));
         });
         s+=group(on(1),'<path data-connection="queue-consumer" d="M875 150V175H375V195" fill="none" stroke="'+colors.blue+'" stroke-width="2.5" marker-end="url(#arrow-blue)"/>'+
-          arrow(625,305,625,345,'gray',true)+box(450,350,370,100,'Downstream services','Persist / Process','gray'));
+          arrow(625,305,625,345,'gray',true)+box(450,350,370,100,'Layanan lain','Catat dan manfaatkan','gray'));
         break;
       case 'broker':
         s=box(25,135,255,150,'OBU /\nGPS Module','Publish','gray')+group(on(1),arrow(285,205,365,205)+box(370,135,255,150,'Source broker','Topic → subscription'))+group(on(2),arrow(630,205,710,205)+box(715,135,255,150,'Forwarder','Subscriber'));
@@ -65,9 +69,9 @@
         s+=group(on(3),text(500,445,'Configured queues; the same bus follows a consistent route.','svg-small','middle'));break;
       case 'consumer':
         if(step===3){s=pipeline();break;}
-        s=box(25,145,220,120,'Queue','Multi-bus reports')+arrow(250,205,355,205)+box(360,145,280,120,'Hash bus → worker','FNV(bus) % poolSize','purple');
-        for(let i=0;i<4;i++)s+=box(740,20+i*102,220,88,'Worker '+(i+1),'',i===1?'purple':'gray');
-        s+=group(on(1),arrow(645,205,730,165,'purple')+text(500,80,'TJ-123 → same worker','svg-node-title','middle'))+group(on(2),text(30,340,'Prefetch 4 · unacknowledged deliveries','svg-node-title')+text(30,378,'ACK confirms delivery handling.','svg-small'))+text(30,435,'Checkout config: 100 queue × 4 = 400 slot / instance.','svg-small');break;
+        s=box(25,145,220,120,'Queue','Laporan banyak bus')+arrow(250,205,355,205)+box(360,145,320,120,'Pembagian tugas','Berdasarkan nomor body bus','purple');
+        for(let i=0;i<4;i++)s+=box(740,20+i*102,220,88,i===3?'Worker...N':'Worker '+(i+1),i===0?'TJ-123':'',i===0?'purple':'gray');
+        s+=group(on(1),arrow(685,205,730,64,'purple')+text(430,65,'TJ-123 mengikuti Worker 1','svg-node-title','middle'))+group(on(2),text(30,340,'Jumlah laporan per worker dibatasi','svg-node-title')+text(30,378,'agar worker tidak kewalahan.','svg-small'))+text(30,435,'Bus berbeda bisa diproses bersamaan.','svg-small');break;
       case 'enrichment':
         s=box(15,175,205,150,'Raw GPS message','TJ-123')+group(on(1),box(245,20,210,110,'Cron API','Provide Redis data','purple')+arrow(350,135,350,170,'purple')+box(245,175,210,150,'Redis','Reference cache','purple')+arrow(225,250,240,250,'purple'))+group(on(2),arrow(460,250,475,250,'teal')+box(480,175,205,150,'Enriched message','raw + enriched data','teal'))+text(350,390,'Redis lookup avoids database reads per GPS report.','svg-small','middle');break;
       case 'position':
@@ -86,20 +90,34 @@
           group(on(2),text(500,305,'ETA (s) = (distance_m / 1,000) / speed_kmh × 3,600','svg-code','middle')+
           text(500,350,'= (1,000 / 1,000) / 30 × 3,600','svg-node-title','middle'))+
           group(on(3),text(500,425,'120 s = 2 min','svg-big','middle'));break;
+      case 'progress-headway': {
+        const example=D.progressExample,xFor=meters=>70+860*meters/example.routeLengthMeters;
+        const current=xFor(example.positionMeters),other=xFor(example.otherPositionMeters);
+        s=text(500,35,'Posisi bus di sepanjang lintasan','svg-node-title','middle')+'<path d="M70 230H930" class="route-base"/><path d="M70 230H930" class="route-line"/>';
+        [[70,'A','0 m'],[500,'B','1.000 m'],[930,'C','2.000 m']].forEach(([x,label,value])=>{s+=`<circle cx="${x}" cy="230" r="10" fill="white" stroke="${colors.blue}" stroke-width="3"/>`+text(x,280,label,'svg-node-title','middle')+text(x,318,value,'svg-small','middle');});
+        s+=bus(current,210,'blue',example.bus)+text(500,370,'TJ-123: 1.240 m sepanjang acuan lintasan','svg-node-title','middle');
+        s+=group(on(1),bus(other,210,'purple',example.otherBus));
+        s+=group(on(2),`<path d="M${current} 125V105H${other}V125" fill="none" stroke="${colors.teal}" stroke-width="3"/>`+text((current+other)/2,85,'400 m','svg-node-title','middle')+text(500,420,'1.640 m − 1.240 m = 400 m','svg-small','middle'));
+        break;
+      }
       case 'publish':
-        s=box(10,40,210,105,'Redis state','history:<bus>','purple')+
-          group(on(1),arrow(225,90,240,90)+box(245,40,210,105,'Consumer','Publish via MQTT','purple')+
-          arrow(460,90,475,90)+box(480,40,210,105,'Broker','Result delivery'));
-        ['syntra/generic/<bus>','/vehicle-update/…/<bus>','syntra/gps_history/','syntra/arrival_history/'].forEach((topic,i)=>s+=group(on(i<2?1:2),text(30,205+i*52,topic,'svg-code')));
-        s+=group(on(3),text(350,430,'Some outputs are conditional events.','svg-small','middle'));break;
+        s=box(20,155,260,130,'Hasil pengolahan','Posisi dan perjalanan','purple')+
+          arrow(285,180,415,90,'purple')+box(420,25,550,115,'Ingat kondisi terakhir','Acuan untuk laporan berikutnya','purple')+
+          group(on(1),arrow(285,225,415,250,'teal')+box(420,180,550,115,'Bagikan informasi terbaru','Pembaruan untuk dashboard dan layanan lain','teal'))+
+          group(on(2),text(440,345,'Kabar kedatangan dikirim saat bus tiba.','svg-small'))+
+          group(on(3),text(500,420,'TJ-123: meninggalkan B, menuju C','svg-node-title','middle'));break;
       case 'receivers':
-        s=box(20,55,240,115,'API / database','Initial snapshot','gray')+arrow(265,112,355,112,'gray')+box(360,55,255,115,'Dashboard','Live track + headway')+group(on(1),box(20,265,240,115,'MQTT','Vehicle update')+arrow(265,320,355,145)+text(415,225,'Vehicle updates','svg-small'))+group(on(2),box(700,55,275,145,'Bus stop gap','Arrival + generic + sensor','teal')+text(700,285,'Other consumers: PIS / CC','svg-small')+text(700,320,'Topic mapping unverified.','svg-small'))+text(500,430,'Page prefetch: initial snapshot, followed by live updates.','svg-small','middle');break;
-      case 'storage':
-        s=box(20,65,420,115,'tije-bus-tracking','Latest GPS + enriched tracking','teal')+text(40,235,'UPSERT per bus','svg-big')+text(40,290,'bus_locations · bus_trackings','svg-code')+group(on(1),box(535,65,440,115,'tije-bus-histories','Historical records','gray')+text(555,235,'INSERT new records','svg-node-title')+text(555,290,'gps_histories · arrival_histories','svg-code'))+group(on(2),text(555,350,'travel_time_segment','svg-code')+text(500,420,'Redis state, snapshot database, histori, dan model browser punya tujuan berbeda.','svg-small','middle'));break;
+        s=box(35,55,320,115,'Data tersimpan','Kondisi bus terakhir','gray')+arrow(360,112,605,112,'gray')+box(610,55,350,135,'Dashboard','Posisi bus di layar')+group(on(1),box(35,265,320,115,'Data terbaru','Informasi perjalanan')+arrow(360,320,605,155)+text(635,245,'Tampilan diperbarui','svg-node-title'))+text(500,430,'Data awal tampil, lalu mengikuti pembaruan yang diterima.','svg-small','middle');break;
+      case 'impact':
+        s=box(20,165,270,125,'Informasi perjalanan','Hasil kerja consumer','purple');
+        [['Verifikasi jarak tempuh','Riwayat perjalanan untuk pemeriksaan',0],['Command Center','Posisi bus untuk pemantauan layanan',1],['TJ Apps','Informasi perjalanan di aplikasi',2],['PIS','Informasi perjalanan bagi penumpang',2]].forEach(([title,detail,reveal],i)=>{
+          const y=20+i*105;
+          s+=group(on(reveal),arrow(295,227,405,y+44,'teal')+box(410,y,565,90,title,detail,'teal','svg-node-title',40,'svg-small',49));
+        });break;
       case 'tradeoff':
-        s=text(500,75,'Buses × report rate × retention','svg-node-title','middle');
-        [80,140,230,340].forEach((h,i)=>s+=`<rect x="${100+i*135}" y="${390-h}" width="75" height="${h}" rx="4" fill="${colors.gray}" fill-opacity="${.18+i*.16}"/>`);
-        s+=text(310,425,'Illustrative growth','svg-small','middle')+group(on(1),text(665,145,'Analytical value','svg-node-title')+text(665,190,'Storage + query cost','svg-node-title'))+group(on(2),text(665,280,'Management options','svg-node-title')+text(665,325,'Retention · partitioning · archiving','svg-small')+text(665,370,'Based on data requirements.','svg-small'));break;
+        s=text(500,32,'Lebih banyak laporan, lebih banyak data riwayat','svg-node-title','middle');
+        [65,115,185,270].forEach((h,i)=>s+=`<rect x="${100+i*135}" y="${365-h}" width="75" height="${h}" rx="4" fill="${colors.gray}" fill-opacity="${.18+i*.16}"/>`);
+        s+=text(310,410,'Ilustrasi pertumbuhan data riwayat','svg-small','middle')+text(310,442,'GPS, kedatangan, dan lainnya','svg-small','middle')+text(665,145,'Bahan evaluasi layanan','svg-node-title')+group(on(1),text(665,205,'Butuh ruang simpan','svg-node-title'))+group(on(2),text(665,290,'Berapa lama disimpan?','svg-node-title')+text(665,335,'Sesuaikan dengan kebutuhan','svg-small')+text(665,370,'pemeriksaan dan evaluasi.','svg-small'));break;
       case 'issues': {
         const cases=[['Queue backlog','Input rate > processing rate','Processing berat, dependency lambat, atau load tidak merata.','Pantau throughput, message age, dan bottleneck sebelum scaling.'],['Delayed / missing updates','Marker tertinggal atau berhenti','Koneksi device, broker, atau subscriber terganggu.','Bandingkan timestamp; periksa koneksi, reconnect, dan subscriber.'],['Marker vs stop status','Marker tampak di stop; arrival belum terdeteksi','Raw/snap berbeda, reference data atau state usang.','Bandingkan raw, snap, trip, radius, stop sequence, dan state.']];
         const [title,symptom,cause,action]=cases[step];
@@ -133,13 +151,20 @@
         break;
       }
       case 'recap':
-        s=group(on(0),box(20,135,250,150,'Observation','Identity + GPS + time'))+group(on(1),arrow(275,210,360,210)+box(365,135,265,150,'Processing','Context + state + calculations','purple'))+group(on(2),arrow(635,210,715,210,'teal')+box(720,135,260,150,'Information','Dashboard + services + history','teal')+text(500,380,'Check freshness. Read ETA as an estimate.','svg-node-title','middle'));break;
+        s=group(on(0),box(20,135,250,150,'Laporan bus','Posisi dan waktu'))+group(on(1),arrow(275,210,360,210)+box(365,135,265,150,'Pengolahan','Informasi perjalanan','purple'))+group(on(2),arrow(635,210,715,210,'teal')+box(720,135,260,150,'Pemanfaatan','Operasional dan penumpang','teal')+text(500,380,'Perhatikan waktu laporan. Waktu tiba merupakan perkiraan.','svg-node-title','middle'));break;
     }
     const defs='<defs>'+Object.keys(colors).map(c=>`<marker id="arrow-${c}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="${colors[c]}"/></marker>`).join('')+'</defs>';
     return `<svg class="diagram" viewBox="0 0 ${w} 460" role="img" aria-label="${esc(scene.takeaway)}">${defs}${s}</svg>`;
   }
   function payloadPanel(scene,step) {
     const stage=scene.payload,snapshot=D.payloads[stage];let fields;
+    if(stage==='context') {
+      const comparison=D.enrichmentComparison,enriched=step>=comparison.resultStep;
+      const row=(key,label,isNew=false)=>`<div class="payload-row${isNew?' is-new':''}"><dt>${esc(label)}</dt><dd>${esc(JSON.stringify(snapshot[key]))}</dd></div>`;
+      const input=comparison.inputFields.map(key=>row(key,key)).join('');
+      const added=enriched?comparison.addedFields.map(({key,label})=>row(key,label,true)).join(''):'';
+      return `<aside class="payload-panel payload-comparison" aria-label="${enriched?'Data setelah enrichment':'Data sebelum enrichment'}"><p class="payload-label">${enriched?'Data diperkaya':'Data awal'} · ${esc(D.demo.bus)}</p><dl>${input}${added}</dl></aside>`;
+    }
     if(stage==='raw') {
       const entries=Object.entries(snapshot);
       const rows=entries.map(([key,value],i)=>{
@@ -182,6 +207,16 @@
       `<div class="hook-connection${step<1?' is-pending':''}" aria-label="data flow"><span>data</span><svg viewBox="0 0 120 45" aria-hidden="true"><path d="M5 22H108M91 8L110 22L91 36"/></svg><strong>${step>=2?'?':''}</strong></div>`+
       `<div class="hook-photo${step<1?' is-pending':''}">${photoSlot('dashboardPhoto')}<figcaption>Live tracking dashboard</figcaption></div></figure>`;
   }
+  function dashboardResult() {
+    const data=D.dashboardExample;
+    const map=`<svg class="diagram" viewBox="0 0 600 420" role="img" aria-label="Titik bus ${esc(data.uid)} pada ilustrasi live tracking"><path d="M40 110H560M60 310H550M145 30V385M425 25V390" class="map-road"/><path d="M45 280H170L280 170H405L540 290" class="route-base"/><path d="M45 280H170L280 170H405L540 290" class="route-line"/><circle cx="45" cy="280" r="9" fill="white" stroke="${colors.blue}" stroke-width="3"/><circle cx="330" cy="170" r="9" fill="white" stroke="${colors.blue}" stroke-width="3"/><circle cx="540" cy="290" r="9" fill="white" stroke="${colors.blue}" stroke-width="3"/>${text(45,320,'A','svg-node-title','middle')}${text(330,140,'B','svg-node-title','middle')}${text(540,330,'C','svg-node-title','middle')}<circle cx="445" cy="206" r="25" fill="${colors.blue}" fill-opacity=".12"/><circle cx="445" cy="206" r="10" fill="${colors.blue}" stroke="white" stroke-width="3"/>${text(445,265,data.uid,'svg-node-title','middle')}</svg>`;
+    const snippet=JSON.stringify(data,null,2);
+    return `<figure class="figure dashboard-result"><aside class="dashboard-json"><p>Simplified vehicle_update · JSON</p><pre>${esc(snippet)}</pre></aside><div class="dashboard-result-arrow" aria-hidden="true">→</div><div class="dashboard-map"><p>Live tracking · ilustrasi</p>${map}</div></figure>`;
+  }
+  function monitoringFigure(scene,step) {
+    const view=scene.views[step],asset=D.assets[view.asset];
+    return `<figure class="figure monitoring-figure"><div class="monitoring-description"><h2>${esc(view.title)}</h2><p class="monitoring-input">${esc(view.input)}</p><p>${esc(view.description)}</p></div><div class="photo-slot monitoring-screenshot"><img src="${esc(asset.file)}" alt="${esc(asset.alt)}"><div class="photo-placeholder"><strong>${esc(asset.label)}</strong><span>Screenshot belum tersedia</span></div></div></figure>`;
+  }
   function sceneHtml(scene,step) {
     if(scene.visual==='cover') {
       const split=D.title.indexOf(':');
@@ -190,6 +225,8 @@
     if(scene.visual==='qa')return `<section class="stage bookend is-qa"><p class="cover-meta">TIJEMPOLAN</p><h1>${esc(scene.title)}</h1><p>${esc(scene.takeaway)}</p></section>`;
     let figure;
     if(scene.visual==='hook')figure=hookFigure(step);
+    else if(scene.visual==='receivers'&&step===2)figure=dashboardResult();
+    else if(scene.visual==='monitoring')figure=monitoringFigure(scene,step);
     else if(scene.visual==='source') {
       const a=D.assets[scene.aside];
       figure=`<figure class="figure source-figure"><div class="device-photo"><img src="${esc(a.file)}" alt="${esc(a.alt)}"><figcaption>On-board unit</figcaption></div>${payloadPanel(scene,step)}<div class="source-topic">MQTT publish → <code>${esc(D.sourceTopic)}</code><span>Example: ${esc(D.sourceTopicExample)}</span></div></figure>`;
